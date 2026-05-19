@@ -35,6 +35,7 @@ jobs:
         run: |
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public || true
+          cp .npmrc .next/standalone/.npmrc || true
 
       - name: Deploy to Azure Static Web Apps
         id: builddeploy
