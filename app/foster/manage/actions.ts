@@ -32,7 +32,7 @@ export async function loadFosterData(mobile: string) {
           .eq("id", commitmentData.adoption_id)
           .single();
         if (adoption?.notes) {
-          const match = adoption.notes.match(/Reason for adoption:\s*(.+)/s);
+          const match = adoption.notes.match(/Reason for adoption:\s*([\s\S]+)/);
           adoption_reason = match ? match[1].trim() : null;
         }
       }
