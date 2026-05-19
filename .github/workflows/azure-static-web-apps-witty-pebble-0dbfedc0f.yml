@@ -25,6 +25,15 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Verify env vars
+        run: |
+          echo "SUPABASE_URL length: ${#NEXT_PUBLIC_SUPABASE_URL}"
+          echo "SUPABASE_URL starts with: $(echo $NEXT_PUBLIC_SUPABASE_URL | cut -c1-8)"
+          echo "ANON_KEY length: ${#NEXT_PUBLIC_SUPABASE_ANON_KEY}"
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
       - name: Build
         run: npm run build
         env:
