@@ -150,8 +150,8 @@ export async function submitAdoptionCommitment(data: CommitmentFormData) {
 
     // 6. Send WhatsApp confirmation (fire-and-forget)
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ? "" : "http://localhost:3000";
-      await fetch(`${baseUrl || ""}/api/whatsapp/send`, {
+      const baseUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      await fetch(`${baseUrl}/api/whatsapp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
