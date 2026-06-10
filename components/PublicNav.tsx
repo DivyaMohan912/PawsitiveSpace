@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { label: "Adopt", href: "/adopt" },
   { label: "TNR", href: "/tnr" },
   { label: "Foster", href: "/foster/manage" },
+  { label: "Contact", href: "/contact" },
   { label: "Admin", href: "/admin/login" },
 ];
 

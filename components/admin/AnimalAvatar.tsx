@@ -16,12 +16,29 @@ export default function AnimalAvatar({
 
 function DogAvatar({ size }: { size: number }) {
   return (
-    <div
-      className="flex items-center justify-center rounded-full bg-amber-50"
-      style={{ width: size, height: size, fontSize: size * 0.6 }}
-    >
-      🐶
-    </div>
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+      {/* head */}
+      <circle cx="40" cy="44" r="26" fill="#D4A574" />
+      {/* ears */}
+      <ellipse cx="18" cy="32" rx="10" ry="16" fill="#C08850" transform="rotate(-15 18 32)" />
+      <ellipse cx="62" cy="32" rx="10" ry="16" fill="#C08850" transform="rotate(15 62 32)" />
+      {/* inner ears */}
+      <ellipse cx="19" cy="33" rx="6" ry="10" fill="#E8B4B8" transform="rotate(-15 19 33)" />
+      <ellipse cx="61" cy="33" rx="6" ry="10" fill="#E8B4B8" transform="rotate(15 61 33)" />
+      {/* eyes */}
+      <circle cx="32" cy="40" r="4" fill="#3D2B1F" />
+      <circle cx="48" cy="40" r="4" fill="#3D2B1F" />
+      <circle cx="33.5" cy="38.5" r="1.5" fill="white" />
+      <circle cx="49.5" cy="38.5" r="1.5" fill="white" />
+      {/* snout */}
+      <ellipse cx="40" cy="50" rx="10" ry="7" fill="#E8D0B0" />
+      {/* nose */}
+      <ellipse cx="40" cy="48" rx="4" ry="3" fill="#3D2B1F" />
+      {/* mouth */}
+      <path d="M36 52 Q40 56 44 52" stroke="#3D2B1F" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      {/* tongue */}
+      <ellipse cx="40" cy="55" rx="3" ry="2" fill="#E8A0A8" />
+    </svg>
   );
 }
 

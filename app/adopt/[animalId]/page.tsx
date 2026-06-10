@@ -6,6 +6,8 @@ import { createBrowserClient } from "@/lib/supabase";
 import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
+import ShareToInstagram from "@/components/ShareToInstagram";
+import { buildAdoptionCaption } from "@/lib/instagram";
 
 interface Listing {
   id: string;
@@ -127,13 +129,19 @@ export default function AnimalDetailPage() {
                   <p className="text-sm text-gray-500 mt-1">📍 {listing.location}</p>
                 )}
               </div>
-              <span className={`shrink-0 text-xs font-bold px-3 py-1 rounded-full ${
-                listing.status === "open"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-gray-100 text-gray-500"
-              }`}>
-                {listing.status === "open" ? "Available" : listing.status}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <ShareToInstagram
+                  imageUrl={hasPhotos ? listing.photos[0] : null}
+                  caption={buildAdoptionCaption(listing)}
+                />
+                <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                  listing.status === "open"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-500"
+                }`}>
+                  {listing.status === "open" ? "Available" : listing.status}
+                </span>
+              </div>
             </div>
 
             {/* Info grid */}

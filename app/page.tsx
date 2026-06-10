@@ -6,6 +6,7 @@ import PublicNav from "@/components/PublicNav";
 import { createBrowserClient } from "@/lib/supabase";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import { loadHomeStats } from "./actions";
+import { registerVolunteer } from "./shared-actions";
 
 /* ------------------------------------------------------------------ */
 /*  Inline SVG illustrations                                          */
@@ -13,9 +14,36 @@ import { loadHomeStats } from "./actions";
 
 function DogIllustration({ className = "" }: { className?: string }) {
   return (
-    <div className={`flex items-center justify-center ${className}`} style={{ fontSize: "8rem", lineHeight: 1 }}>
-      🐕
-    </div>
+    <svg viewBox="0 0 200 200" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* body */}
+      <ellipse cx="100" cy="145" rx="40" ry="35" fill="#D4A574" />
+      {/* head */}
+      <circle cx="100" cy="85" r="35" fill="#D4A574" />
+      {/* ears - floppy */}
+      <ellipse cx="68" cy="62" rx="14" ry="22" fill="#C08850" transform="rotate(-15 68 62)" />
+      <ellipse cx="132" cy="62" rx="14" ry="22" fill="#C08850" transform="rotate(15 132 62)" />
+      {/* inner ears */}
+      <ellipse cx="69" cy="64" rx="8" ry="14" fill="#E8B4B8" transform="rotate(-15 69 64)" />
+      <ellipse cx="131" cy="64" rx="8" ry="14" fill="#E8B4B8" transform="rotate(15 131 64)" />
+      {/* eyes */}
+      <circle cx="87" cy="80" r="5" fill="#3D2B1F" />
+      <circle cx="113" cy="80" r="5" fill="#3D2B1F" />
+      <circle cx="89" cy="78" r="2" fill="white" />
+      <circle cx="115" cy="78" r="2" fill="white" />
+      {/* snout */}
+      <ellipse cx="100" cy="96" rx="14" ry="10" fill="#E8D0B0" />
+      {/* nose */}
+      <ellipse cx="100" cy="93" rx="5" ry="4" fill="#3D2B1F" />
+      {/* mouth */}
+      <path d="M93 99 Q100 106 107 99" stroke="#3D2B1F" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      {/* tongue */}
+      <ellipse cx="100" cy="104" rx="5" ry="3.5" fill="#E8A0A8" />
+      {/* paws */}
+      <ellipse cx="75" cy="175" rx="10" ry="7" fill="#D4A574" />
+      <ellipse cx="125" cy="175" rx="10" ry="7" fill="#D4A574" />
+      {/* tail */}
+      <path d="M140 140 Q165 120 160 95 Q158 88 152 92" stroke="#C08850" strokeWidth="8" fill="none" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -211,10 +239,175 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ---- Volunteer Registration ---- */}
+      <section id="volunteer" className="max-w-6xl mx-auto px-5 mt-14 mb-10">
+        <VolunteerRegistration />
+      </section>
+
       {/* ---- Footer ---- */}
       <footer className="text-center text-xs text-gray-400 pb-8">
-        © 2026 PawsitiveSpace · Hyderabad, India · Built with 🐾
+        © 2026 PawsitiveSpace · Hyderabad, India · Built with 🐾 ·{" "}
+        <Link href="/contact" className="text-brand-orange hover:underline">Contact Us</Link>
       </footer>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Volunteer Registration Component                                  */
+/* ------------------------------------------------------------------ */
+
+function VolunteerRegistration() {
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    name: "", mobile: "", location: "", role: "rescuer",
+    availability: "weekends", reason: "",
+  });
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim() || !form.mobile.trim() || !form.location.trim()) {
+      setError("Name, mobile and location are required.");
+      return;
+    }
+    setError("");
+    setSubmitting(true);
+
+    const res = await registerVolunteer(form);
+    if (res.success) {
+      setSubmitted(true);
+    } else {
+      setError(res.error || "Registration failed. Please try again.");
+    }
+    setSubmitting(false);
+  }
+
+  if (submitted) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center">
+        <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <svg className="w-7 h-7 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+        </div>
+        <h3 className="font-heading text-xl font-bold mb-1">Thank You! 🎉</h3>
+        <p className="text-gray-600 text-sm">Your volunteer application has been received. Our team will reach out to you soon via WhatsApp.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="font-heading text-2xl sm:text-3xl font-bold">
+            Make a Difference 🙋
+          </h2>
+          <p className="text-gray-500 mt-1">Join our community of volunteers helping animals in Hyderabad.</p>
+        </div>
+        {!open && (
+          <button
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-2 bg-brand-orange text-white font-bold px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:brightness-110 transition"
+          >
+            Register as a Volunteer <span aria-hidden>↗</span>
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">{error}</div>}
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Full Name *</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2.5 text-sm"
+                placeholder="Your full name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">WhatsApp Number *</label>
+              <input
+                value={form.mobile}
+                onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2.5 text-sm"
+                placeholder="+91 98765 43210"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Location / Area *</label>
+            <input
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2.5 text-sm"
+              placeholder="e.g. Madhapur, Gachibowli, Secunderabad"
+            />
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">I want to volunteer for *</label>
+              <select
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2.5 text-sm"
+              >
+                <option value="rescuer">🚑 Rescue — Help rescue animals in distress</option>
+                <option value="foster">🏠 Foster — Provide temporary home for animals</option>
+                <option value="transporter">🚗 Transport — Help transport animals</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Availability *</label>
+              <select
+                value={form.availability}
+                onChange={(e) => setForm({ ...form, availability: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2.5 text-sm"
+              >
+                <option value="weekdays">Weekdays only</option>
+                <option value="weekends">Weekends only</option>
+                <option value="both">Weekdays & Weekends</option>
+                <option value="flexible">Flexible / On-call</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Why do you want to volunteer?</label>
+            <textarea
+              value={form.reason}
+              onChange={(e) => setForm({ ...form, reason: e.target.value })}
+              rows={3}
+              className="w-full border rounded-lg px-3 py-2.5 text-sm"
+              placeholder="Tell us about your experience or motivation…"
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="flex-1 border rounded-lg py-3 font-semibold text-gray-600 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 bg-brand-orange text-white font-bold py-3 rounded-lg hover:brightness-110 transition disabled:opacity-50"
+            >
+              {submitting ? "Registering…" : "Register as Volunteer"}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

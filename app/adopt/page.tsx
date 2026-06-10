@@ -6,6 +6,8 @@ import { createBrowserClient } from "@/lib/supabase";
 import Link from "next/link";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import PublicNav from "@/components/PublicNav";
+import ShareToInstagram from "@/components/ShareToInstagram";
+import { buildAdoptionCaption } from "@/lib/instagram";
 
 interface Listing {
   id: string;
@@ -169,12 +171,19 @@ function AdoptPage() {
                   View Details →
                 </button>
                 {canEdit(l) && (
-                  <button
-                    onClick={() => router.push(`/adopt/edit/${l.id}`)}
-                    className="px-3 py-2 border-2 border-brand-orange text-brand-orange font-bold rounded-lg text-sm hover:bg-brand-orange/10 transition"
-                  >
-                    ✏️ Edit
-                  </button>
+                  <>
+                    <ShareToInstagram
+                      imageUrl={l.photos && l.photos.length > 0 ? l.photos[0] : null}
+                      caption={buildAdoptionCaption(l)}
+                      size="sm"
+                    />
+                    <button
+                      onClick={() => router.push(`/adopt/edit/${l.id}`)}
+                      className="px-3 py-2 border-2 border-brand-orange text-brand-orange font-bold rounded-lg text-sm hover:bg-brand-orange/10 transition"
+                    >
+                      ✏️ Edit
+                    </button>
+                  </>
                 )}
               </div>
             </div>

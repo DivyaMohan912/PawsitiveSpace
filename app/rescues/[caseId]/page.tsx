@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
+import ShareToInstagram from "@/components/ShareToInstagram";
+import { buildRescueCaption } from "@/lib/instagram";
 import { loadCaseDetail, pickUpCase, updateCaseStatus } from "./actions";
 
 interface CaseDetail {
@@ -176,9 +178,22 @@ export default function CaseDetailPage() {
             <p className="font-bold text-sm">{style.label}</p>
             <p className="text-xs opacity-80">Case #{caseData.id.slice(0, 8).toUpperCase()}</p>
           </div>
-          <p className="text-xs opacity-70">
-            Reported {new Date(caseData.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
-          </p>
+          <div className="flex items-center gap-3">
+            <ShareToInstagram
+              imageUrl={hasPhotos ? animal.photos[0] : null}
+              caption={buildRescueCaption({
+                animal_name: animal?.name,
+                species: animal?.species ?? "animal",
+                breed: animal?.breed,
+                location: animal?.location_description,
+                health_notes: animal?.health_notes,
+                case_notes: caseData.case_notes,
+              })}
+            />
+            <p className="text-xs opacity-70">
+              Reported {new Date(caseData.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+            </p>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-5">

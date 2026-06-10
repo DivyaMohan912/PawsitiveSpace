@@ -7,6 +7,7 @@ import PublicNav from "@/components/PublicNav";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import MaskedPhone from "@/components/admin/MaskedPhone";
 import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction } from "./actions";
+import { sendOtp, verifyOtp } from "@/app/shared-actions";
 
 interface Listing {
   id: string;
@@ -38,6 +39,12 @@ export default function FosterManagePage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [requests, setRequests] = useState<Request[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // OTP state
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
 
   const load = useCallback(async () => {
     if (!mobile) return;
@@ -71,14 +78,83 @@ export default function FosterManagePage() {
 
   if (!verified) {
     return (
-      <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full">
-          <h1 className="font-heading text-xl font-bold mb-4">Foster Dashboard</h1>
-          <p className="text-sm text-gray-500 mb-4">Enter the mobile number you used when creating your listing.</p>
-          <input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="+91 98765 43210" className="w-full border rounded-lg px-3 py-2.5 text-sm mb-3" />
-          <button onClick={() => { if (mobile.trim()) setVerified(true); }} className="w-full bg-brand-orange text-white font-bold py-2.5 rounded-lg hover:brightness-110">
-            View My Listings
-          </button>
+      <div className="min-h-screen bg-brand-cream">
+        <PublicNav current="/foster/manage" />
+        <div className="flex items-center justify-center px-4 py-12">
+          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full">
+            <h1 className="font-heading text-xl font-bold mb-4">Foster Dashboard</h1>
+
+            {!otpSent ? (
+              <>
+                <p className="text-sm text-gray-500 mb-4">Enter the mobile number you used when creating your listing. We&apos;ll send an OTP to verify.</p>
+                {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
+                <input
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="w-full border rounded-lg px-3 py-2.5 text-sm mb-3"
+                />
+                <button
+                  onClick={async () => {
+                    if (!mobile.trim()) return;
+                    setOtpLoading(true);
+                    setOtpError("");
+                    const res = await sendOtp(mobile.trim());
+                    if (res.success) {
+                      setOtpSent(true);
+                    } else {
+                      setOtpError(res.error || "Failed to send OTP");
+                    }
+                    setOtpLoading(false);
+                  }}
+                  disabled={otpLoading}
+                  className="w-full bg-brand-orange text-white font-bold py-2.5 rounded-lg hover:brightness-110 disabled:opacity-50"
+                >
+                  {otpLoading ? "Sending OTP…" : "Send OTP via WhatsApp"}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-1">OTP sent to <strong>{mobile}</strong> via WhatsApp.</p>
+                <p className="text-xs text-gray-400 mb-4">Check your WhatsApp messages.</p>
+                {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
+                <input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="Enter 6-digit OTP"
+                  maxLength={6}
+                  className="w-full border rounded-lg px-3 py-2.5 text-sm mb-3 text-center text-2xl tracking-[0.5em] font-mono"
+                />
+                <button
+                  onClick={async () => {
+                    if (otp.length !== 6) {
+                      setOtpError("Enter the 6-digit OTP");
+                      return;
+                    }
+                    setOtpLoading(true);
+                    setOtpError("");
+                    const res = await verifyOtp(mobile.trim(), otp);
+                    if (res.success) {
+                      setVerified(true);
+                    } else {
+                      setOtpError(res.error || "Verification failed");
+                    }
+                    setOtpLoading(false);
+                  }}
+                  disabled={otpLoading}
+                  className="w-full bg-brand-orange text-white font-bold py-2.5 rounded-lg hover:brightness-110 disabled:opacity-50 mb-2"
+                >
+                  {otpLoading ? "Verifying…" : "Verify OTP"}
+                </button>
+                <button
+                  onClick={() => { setOtpSent(false); setOtp(""); setOtpError(""); }}
+                  className="w-full text-sm text-gray-500 hover:text-brand-orange"
+                >
+                  ← Change number
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
