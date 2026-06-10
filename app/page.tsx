@@ -14,36 +14,9 @@ import { registerVolunteer } from "./shared-actions";
 
 function DogIllustration({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 200 200" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* body */}
-      <ellipse cx="100" cy="145" rx="40" ry="35" fill="#D4A574" />
-      {/* head */}
-      <circle cx="100" cy="85" r="35" fill="#D4A574" />
-      {/* ears - floppy */}
-      <ellipse cx="68" cy="62" rx="14" ry="22" fill="#C08850" transform="rotate(-15 68 62)" />
-      <ellipse cx="132" cy="62" rx="14" ry="22" fill="#C08850" transform="rotate(15 132 62)" />
-      {/* inner ears */}
-      <ellipse cx="69" cy="64" rx="8" ry="14" fill="#E8B4B8" transform="rotate(-15 69 64)" />
-      <ellipse cx="131" cy="64" rx="8" ry="14" fill="#E8B4B8" transform="rotate(15 131 64)" />
-      {/* eyes */}
-      <circle cx="87" cy="80" r="5" fill="#3D2B1F" />
-      <circle cx="113" cy="80" r="5" fill="#3D2B1F" />
-      <circle cx="89" cy="78" r="2" fill="white" />
-      <circle cx="115" cy="78" r="2" fill="white" />
-      {/* snout */}
-      <ellipse cx="100" cy="96" rx="14" ry="10" fill="#E8D0B0" />
-      {/* nose */}
-      <ellipse cx="100" cy="93" rx="5" ry="4" fill="#3D2B1F" />
-      {/* mouth */}
-      <path d="M93 99 Q100 106 107 99" stroke="#3D2B1F" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-      {/* tongue */}
-      <ellipse cx="100" cy="104" rx="5" ry="3.5" fill="#E8A0A8" />
-      {/* paws */}
-      <ellipse cx="75" cy="175" rx="10" ry="7" fill="#D4A574" />
-      <ellipse cx="125" cy="175" rx="10" ry="7" fill="#D4A574" />
-      {/* tail */}
-      <path d="M140 140 Q165 120 160 95 Q158 88 152 92" stroke="#C08850" strokeWidth="8" fill="none" strokeLinecap="round" />
-    </svg>
+    <div className={`flex items-center justify-center ${className}`} style={{ fontSize: "8rem", lineHeight: 1 }}>
+      🐕
+    </div>
   );
 }
 
@@ -167,6 +140,12 @@ export default function Home() {
             >
               Adopt now
             </Link>
+            <a
+              href="#volunteer"
+              className="inline-flex items-center gap-2 border-2 border-white/60 text-white font-bold px-6 py-3 rounded-full hover:bg-white/10 transition-colors"
+            >
+              🙋 Volunteer
+            </a>
           </div>
         </div>
 
