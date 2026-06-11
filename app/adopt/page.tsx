@@ -176,6 +176,8 @@ function AdoptPage() {
                       imageUrl={l.photos && l.photos.length > 0 ? l.photos[0] : null}
                       caption={buildAdoptionCaption(l)}
                       size="sm"
+                      role={user.role === "admin" ? "admin" : "foster"}
+                      entityId={l.id}
                     />
                     <button
                       onClick={() => router.push(`/adopt/edit/${l.id}`)}

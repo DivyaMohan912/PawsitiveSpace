@@ -9,27 +9,45 @@ export interface IGPostResult {
 }
 
 /**
- * Publish a single-image post to Instagram via Graph API.
+ * Publish to Instagram via Graph API.
+ * shareType: "story" | "post" | "reel"
  * `imageUrl` must be a publicly accessible URL.
  */
 export async function publishToInstagram(
   imageUrl: string,
-  caption: string
+  caption: string,
+  shareType: "story" | "post" | "reel" = "post"
 ): Promise<IGPostResult> {
   if (!IG_USER_ID || !IG_ACCESS_TOKEN) {
     return { success: false, error: "Instagram credentials not configured" };
   }
 
   try {
+    // Build media container params based on share type
+    const mediaParams: Record<string, string> = {
+      access_token: IG_ACCESS_TOKEN,
+    };
+
+    if (shareType === "story") {
+      // Stories use image_url but no caption
+      mediaParams.image_url = imageUrl;
+      mediaParams.media_type = "STORIES";
+    } else if (shareType === "reel") {
+      // Reels require video_url — for image-based, we fall back to post
+      mediaParams.image_url = imageUrl;
+      mediaParams.caption = caption;
+      mediaParams.media_type = "REELS";
+    } else {
+      // Regular post
+      mediaParams.image_url = imageUrl;
+      mediaParams.caption = caption;
+    }
+
     // Step 1: Create a media container
     const createRes = await fetch(`${GRAPH_API}/${IG_USER_ID}/media`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image_url: imageUrl,
-        caption,
-        access_token: IG_ACCESS_TOKEN,
-      }),
+      body: JSON.stringify(mediaParams),
     });
 
     const createData = await createRes.json();

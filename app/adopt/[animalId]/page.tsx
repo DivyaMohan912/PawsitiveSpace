@@ -33,8 +33,20 @@ export default function AnimalDetailPage() {
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
+  const [userRole, setUserRole] = useState<"admin" | "foster" | null>(null);
 
   useEffect(() => {
+    // Check user role
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) {
+        supabase.from("volunteers").select("role").eq("email", session.user.email).single()
+          .then(({ data }) => {
+            if (data?.role === "admin") setUserRole("admin");
+            else if (data?.role === "foster") setUserRole("foster");
+          });
+      }
+    });
+
     supabase
       .from("adoption_listings")
       .select("*")
@@ -133,6 +145,8 @@ export default function AnimalDetailPage() {
                 <ShareToInstagram
                   imageUrl={hasPhotos ? listing.photos[0] : null}
                   caption={buildAdoptionCaption(listing)}
+                  role={userRole}
+                  entityId={listing.id}
                 />
                 <span className={`text-xs font-bold px-3 py-1 rounded-full ${
                   listing.status === "open"

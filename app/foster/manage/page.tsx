@@ -6,8 +6,10 @@ import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import MaskedPhone from "@/components/admin/MaskedPhone";
-import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction } from "./actions";
+import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction, reopenListing as reopenListingAction } from "./actions";
 import { sendOtp, verifyOtp } from "@/app/shared-actions";
+import ShareToInstagram from "@/components/ShareToInstagram";
+import { buildAdoptionCaption } from "@/lib/instagram";
 
 interface Listing {
   id: string;
@@ -72,6 +74,13 @@ export default function FosterManagePage() {
   async function closeListing(listingId: string) {
     setSaving(true);
     await closeListingAction(listingId);
+    setSaving(false);
+    load();
+  }
+
+  async function reopenListing(listingId: string) {
+    setSaving(true);
+    await reopenListingAction(listingId);
     setSaving(false);
     load();
   }
@@ -202,6 +211,12 @@ export default function FosterManagePage() {
                     </span>
                     {l.status === "open" && (
                       <>
+                        <ShareToInstagram
+                          imageUrl={l.photos && l.photos.length > 0 ? l.photos[0] : null}
+                          caption={buildAdoptionCaption(l)}
+                          role="foster"
+                          entityId={l.id}
+                        />
                         <button onClick={() => router.push(`/adopt/edit/${l.id}`)} className="text-xs text-brand-orange font-semibold hover:underline">
                           Edit
                         </button>
@@ -209,6 +224,11 @@ export default function FosterManagePage() {
                           Close
                         </button>
                       </>
+                    )}
+                    {(l.status === "closed" || l.status === "adopted") && (
+                      <button onClick={() => reopenListing(l.id)} disabled={saving} className="text-xs text-green-600 font-semibold hover:underline">
+                        🔄 Reopen
+                      </button>
                     )}
                   </div>
 

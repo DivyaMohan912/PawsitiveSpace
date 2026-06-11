@@ -7,6 +7,7 @@ import PublicNav from "@/components/PublicNav";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import ShareToInstagram from "@/components/ShareToInstagram";
 import { buildRescueCaption } from "@/lib/instagram";
+import { createBrowserClient } from "@/lib/supabase";
 import { loadCaseDetail, pickUpCase, updateCaseStatus } from "./actions";
 
 interface CaseDetail {
@@ -79,6 +80,7 @@ export default function CaseDetailPage() {
   const [caseData, setCaseData] = useState<CaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
+  const [userRole, setUserRole] = useState<"admin" | "foster" | "reporter" | null>(null);
 
   // Pick up form
   const [showPickUp, setShowPickUp] = useState(false);
@@ -97,6 +99,19 @@ export default function CaseDetailPage() {
     loadCaseDetail(caseId).then((data) => {
       setCaseData(data as unknown as CaseDetail | null);
       setLoading(false);
+    });
+
+    // Check user role
+    const supabase = createBrowserClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) {
+        supabase.from("volunteers").select("role").eq("email", session.user.email).single()
+          .then(({ data }) => {
+            if (data?.role === "admin") setUserRole("admin");
+            else if (data?.role === "foster") setUserRole("foster");
+            else setUserRole("reporter");
+          });
+      }
     });
   }, [caseId]);
 
@@ -189,6 +204,8 @@ export default function CaseDetailPage() {
                 health_notes: animal?.health_notes,
                 case_notes: caseData.case_notes,
               })}
+              role={userRole}
+              entityId={caseData.id}
             />
             <p className="text-xs opacity-70">
               Reported {new Date(caseData.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}

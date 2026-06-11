@@ -64,3 +64,9 @@ export async function closeListing(listingId: string) {
   await supabase.from("adoption_requests").update({ status: "rejected" }).eq("listing_id", listingId).eq("status", "pending");
   return { success: true };
 }
+
+export async function reopenListing(listingId: string) {
+  const supabase = createAdminClient();
+  await supabase.from("adoption_listings").update({ status: "open" }).eq("id", listingId);
+  return { success: true };
+}
