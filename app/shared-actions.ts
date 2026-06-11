@@ -11,17 +11,42 @@ export async function sendOtp(mobile: string) {
 
   otpStore.set(mobile, { code, expiresAt });
 
-  // Send OTP via WhatsApp
+  // Send OTP via WhatsApp (direct Twilio call)
   try {
-    const baseUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    await fetch(`${baseUrl}/api/whatsapp/send`, {
+    const sid = process.env.TWILIO_ACCOUNT_SID;
+    const token = process.env.TWILIO_AUTH_TOKEN;
+    const from = process.env.TWILIO_WHATSAPP_FROM;
+
+    if (!sid || !token || !from) {
+      console.error("[OTP] Twilio credentials missing");
+      return { success: false, error: "WhatsApp service not configured." };
+    }
+
+    const toFormatted = mobile.startsWith("whatsapp:")
+      ? mobile
+      : `whatsapp:${mobile.startsWith("+") ? mobile : "+" + mobile}`;
+
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
+    const auth = Buffer.from(`${sid}:${token}`).toString("base64");
+
+    const resp = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: mobile,
-        message: `🐾 PawsitiveSpace Verification\n\nYour OTP is: *${code}*\n\nThis code expires in 5 minutes. Do not share it with anyone.`,
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        From: from,
+        To: toFormatted,
+        Body: `🐾 PawsitiveSpace Verification\n\nYour OTP is: *${code}*\n\nThis code expires in 5 minutes. Do not share it with anyone.`,
       }),
     });
+
+    if (!resp.ok) {
+      const errData = await resp.json();
+      console.error("[OTP Twilio Error]", errData);
+      return { success: false, error: "Failed to send OTP. Please try again." };
+    }
   } catch (err) {
     console.error("[OTP Send Error]", err);
     return { success: false, error: "Failed to send OTP. Please try again." };
