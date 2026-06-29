@@ -89,7 +89,7 @@ export default function ReportPage() {
           <h1 className="font-heading text-2xl font-bold mb-2">Report Submitted!</h1>
           <p className="text-gray-600 mb-2">Your case ID is:</p>
           <p className="text-3xl font-mono font-bold text-brand-orange mb-4">{caseId}</p>
-          <p className="text-sm text-gray-500 mb-6">Save this ID — you can check the status anytime via WhatsApp by sending &quot;status&quot; to our number.</p>
+          <p className="text-sm text-gray-500 mb-6">Save this ID — you can track the status anytime on the case page. Our team will reach out by phone if needed.</p>
           <div className="flex gap-3 justify-center">
             <Link href="/" className="text-brand-orange font-bold hover:underline">← Home</Link>
             <Link href="/report" onClick={() => { setSubmitted(false); setForm({ species: "dog", location: "", description: "", urgency: "medium", reporter_name: "", reporter_whatsapp: "" }); }} className="text-brand-orange font-bold hover:underline">Report Another</Link>

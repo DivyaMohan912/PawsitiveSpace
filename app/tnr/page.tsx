@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
+import { orgWaLink } from "@/lib/click-to-chat";
 
 export default function TNRPage() {
   return (
@@ -35,7 +36,7 @@ export default function TNRPage() {
           <div className="bg-white rounded-2xl p-5">
             <h3 className="font-heading font-bold text-lg mb-2">📍 Colony near you?</h3>
             <p className="text-sm text-gray-600">
-              If you notice a cat colony in your area that hasn&apos;t been TNR&apos;d, report it via WhatsApp or our 
+              If you notice a cat colony in your area that hasn&apos;t been TNR&apos;d, use our
               <Link href="/report" className="text-brand-orange font-bold hover:underline"> report form</Link>. 
               We&apos;ll send a volunteer to assess and schedule TNR.
             </p>
@@ -44,7 +45,7 @@ export default function TNRPage() {
             <h3 className="font-heading font-bold text-lg mb-2">🤝 Become a Colony Caretaker</h3>
             <p className="text-sm text-gray-600">
               Colony caretakers provide food, water, and monitor the health of community cats.
-              It&apos;s the most impactful thing you can do for strays. Message us on WhatsApp to sign up.
+              It&apos;s the most impactful thing you can do for strays. <a href={orgWaLink("Hi! I'd like to become a TNR colony caretaker.")} target="_blank" rel="noopener noreferrer" className="text-brand-orange font-bold hover:underline">Message us on WhatsApp</a> to sign up.
             </p>
           </div>
           <div className="bg-white rounded-2xl p-5">

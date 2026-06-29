@@ -58,7 +58,7 @@ export async function submitReport(data: ReportData) {
       .single();
     if (caseErr) throw caseErr;
 
-    // Notify volunteers via WhatsApp (fire-and-forget)
+    // Build volunteer click-to-chat links (fire-and-forget; no API send)
     notifyVolunteersOfNewRescue(
       rescue.id,
       data.location,

@@ -58,7 +58,7 @@ export default function CommitmentPage() {
   const [signature, setSignature] = useState("");
   const [finalAck, setFinalAck] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ referenceId: string; animalName: string } | null>(null);
+  const [result, setResult] = useState<{ referenceId: string; animalName: string; chatLink: string | null } | null>(null);
   const [error, setError] = useState("");
   const [adoptionReason, setAdoptionReason] = useState("");
 
@@ -93,7 +93,7 @@ export default function CommitmentPage() {
     });
 
     if (res.success) {
-      setResult({ referenceId: res.referenceId!, animalName: res.animalName! });
+      setResult({ referenceId: res.referenceId!, animalName: res.animalName!, chatLink: res.chatLink ?? null });
     } else {
       setError(res.error || "Submission failed. Please try again.");
     }
@@ -114,8 +114,13 @@ export default function CommitmentPage() {
             <p className="text-xs text-gray-500 font-semibold uppercase">Reference Number</p>
             <p className="text-2xl font-mono font-bold text-brand-orange">{result.referenceId}</p>
           </div>
-          <p className="text-sm text-gray-500 mb-4">Our team will contact you within 24 hours. A confirmation has been sent to your WhatsApp.</p>
+          <p className="text-sm text-gray-500 mb-4">Our team will contact you within 24 hours.</p>
           <p className="text-xs text-gray-400 bg-green-50 border border-green-200 rounded-lg p-3 mb-4">✅ Your adoption request has been sent to the foster. They will review it and reach out to you.</p>
+          {result.chatLink && (
+            <a href={result.chatLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full bg-[#25D366] text-white font-bold py-3 rounded-lg text-center hover:brightness-110 transition mb-3">
+              💬 Message us on WhatsApp
+            </a>
+          )}
           <Link href="/adopt" className="inline-block w-full bg-brand-orange text-white font-bold py-3 rounded-lg text-center hover:brightness-110 transition mb-3">
             Browse More Animals
           </Link>

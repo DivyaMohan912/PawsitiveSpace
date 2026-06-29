@@ -50,7 +50,7 @@ export async function submitAdoptionRequest(data: {
       return { success: false, error: insertErr.message };
     }
 
-    // Notify foster via WhatsApp (fire-and-forget)
+    // Build foster click-to-chat link (fire-and-forget; no API send)
     notifyFosterOfAdoptionRequest(data.listingId, data.name, data.mobile).catch((err) => {
       console.error("[Adoption Notify Error]", err);
     });

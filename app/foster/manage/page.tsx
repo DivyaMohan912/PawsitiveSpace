@@ -21,6 +21,7 @@ interface Listing {
   status: string;
   foster_name: string;
   foster_mobile: string;
+  photos: string[] | null;
   created_at: string;
 }
 
@@ -95,12 +96,12 @@ export default function FosterManagePage() {
 
             {!otpSent ? (
               <>
-                <p className="text-sm text-gray-500 mb-4">Enter the mobile number you used when creating your listing. We&apos;ll send an OTP to verify.</p>
+                <p className="text-sm text-gray-500 mb-4">Enter the mobile number or email you used when creating your listing. We&apos;ll send a one-time code to verify.</p>
                 {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
                 <input
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 98765 43210 or you@email.com"
                   className="w-full border rounded-lg px-3 py-2.5 text-sm mb-3"
                 />
                 <button
@@ -119,13 +120,13 @@ export default function FosterManagePage() {
                   disabled={otpLoading}
                   className="w-full bg-brand-orange text-white font-bold py-2.5 rounded-lg hover:brightness-110 disabled:opacity-50"
                 >
-                  {otpLoading ? "Sending OTP…" : "Send OTP via WhatsApp"}
+                  {otpLoading ? "Sending OTP…" : "Send verification code"}
                 </button>
               </>
             ) : (
               <>
-                <p className="text-sm text-gray-500 mb-1">OTP sent to <strong>{mobile}</strong> via WhatsApp.</p>
-                <p className="text-xs text-gray-400 mb-4">Check your WhatsApp messages.</p>
+                <p className="text-sm text-gray-500 mb-1">Code sent to <strong>{mobile}</strong>.</p>
+                <p className="text-xs text-gray-400 mb-4">Check your SMS or email inbox.</p>
                 {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
                 <input
                   value={otp}

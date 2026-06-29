@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 import { submitContactForm } from "@/app/shared-actions";
+import { orgWaLink } from "@/lib/click-to-chat";
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", mobile: "", subject: "", message: "" });
@@ -62,7 +63,7 @@ export default function ContactPage() {
           <div className="bg-white rounded-2xl p-5 text-center">
             <p className="text-3xl mb-2">📱</p>
             <h3 className="font-bold text-sm mb-1">WhatsApp</h3>
-            <p className="text-sm text-gray-500">Reach us via the form below</p>
+            <a href={orgWaLink()} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-orange font-bold hover:underline">Tap to chat with us</a>
           </div>
         </div>
 

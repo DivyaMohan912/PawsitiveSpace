@@ -1,49 +1,28 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase";
-
-const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID!;
-const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN!;
-const TWILIO_FROM = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
+import {
+  buildWaLink,
+  adoptionRequestMessage,
+  newRescueMessage,
+} from "@/lib/click-to-chat";
 
 /**
- * Send a WhatsApp message via Twilio REST API.
+ * NOTE: WhatsApp Business API / Twilio programmatic sends have been removed.
+ * These helpers now return click-to-chat (wa.me) links so a volunteer/admin
+ * can tap to open WhatsApp with a pre-filled message — no API approval or
+ * fees required. They return links (never throw) so callers keep their
+ * fire-and-forget shape.
  */
-export async function sendWhatsApp(to: string, message: string) {
-  const toFormatted = to.startsWith("whatsapp:") ? to : `whatsapp:${to.startsWith("+") ? to : "+" + to}`;
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`;
-  const auth = Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString("base64");
-
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ From: TWILIO_FROM, To: toFormatted, Body: message }),
-    });
-    const data = await resp.json();
-    if (!resp.ok) {
-      console.error(`[WhatsApp] Failed to ${to}:`, data);
-      return { success: false, error: data.message };
-    }
-    console.log(`[WhatsApp] Sent to ${to}: ${data.sid}`);
-    return { success: true, sid: data.sid };
-  } catch (err: any) {
-    console.error(`[WhatsApp] Error sending to ${to}:`, err.message);
-    return { success: false, error: err.message };
-  }
-}
 
 /**
- * Notify the foster when someone submits an adoption request for their listing.
+ * Build a click-to-chat link to notify the foster about a new adoption request.
  */
 export async function notifyFosterOfAdoptionRequest(
   listingId: string,
   requesterName: string,
   requesterPhone?: string,
-  description?: string
+  _description?: string
 ) {
   const supabase = createAdminClient();
   const { data: listing } = await supabase
@@ -52,18 +31,11 @@ export async function notifyFosterOfAdoptionRequest(
     .eq("id", listingId)
     .single();
 
-  if (!listing?.foster_mobile) return;
+  if (!listing?.foster_mobile) return { link: null as string | null };
 
   const animal = listing.breed ? `${listing.species} (${listing.breed})` : listing.species;
-  const message =
-    `🐾 *PawsitiveSpace — New Adoption Request*\n\n` +
-    `Hi ${listing.foster_name}, someone is interested in adopting your ${animal}!\n\n` +
-    `👤 Requester: *${requesterName}*\n` +
-    (requesterPhone ? `📞 Phone: *${requesterPhone}*\n` : "") +
-    (description ? `📝 Note: ${description}\n` : "") +
-    `\nPlease check the app under Foster → Manage to review the request.`;
-
-  await sendWhatsApp(listing.foster_mobile, message);
+  const message = adoptionRequestMessage(listing.foster_name, animal, requesterName, requesterPhone);
+  return { link: buildWaLink(listing.foster_mobile, message) };
 }
 
 /**
@@ -74,8 +46,8 @@ export async function notifyVolunteersOfNewRescue(
   location: string,
   description: string,
   urgency: string,
-  reporterName?: string,
-  reporterPhone?: string
+  _reporterName?: string,
+  _reporterPhone?: string
 ) {
   const supabase = createAdminClient();
   const { data: volunteers } = await supabase
@@ -84,23 +56,14 @@ export async function notifyVolunteersOfNewRescue(
     .eq("is_active", true)
     .in("role", ["rescuer", "admin"]);
 
-  if (!volunteers?.length) return;
+  if (!volunteers?.length) return { links: [] as { name: string; link: string | null }[] };
 
   const shortId = caseId.slice(0, 8).toUpperCase();
-  const urgencyEmoji = urgency === "high" ? "🔴" : urgency === "medium" ? "🟡" : "🟢";
-  const message =
-    `🚨 *PawsitiveSpace — New Rescue Reported*\n\n` +
-    `${urgencyEmoji} Urgency: *${urgency}*\n` +
-    `📍 Location: *${location}*\n` +
-    `📝 ${description}\n\n` +
-    (reporterName ? `👤 Reporter: *${reporterName}*\n` : "") +
-    (reporterPhone ? `📞 Contact: *${reporterPhone}*\n` : "") +
-    `\nCase: ${shortId}\n` +
-    `Please check the app and respond if you can help!`;
+  const message = newRescueMessage(shortId, location, description, urgency);
 
-  await Promise.allSettled(
-    volunteers.map((v) => sendWhatsApp(v.whatsapp_number, message))
-  );
+  return {
+    links: volunteers.map((v) => ({ name: v.name, link: buildWaLink(v.whatsapp_number, message) })),
+  };
 }
 
 /**
@@ -118,7 +81,7 @@ export async function notifyAdminsOfOverdueRescues(overdueDays = 3) {
     .in("status", ["open", "in_progress"])
     .lt("created_at", cutoff.toISOString());
 
-  if (!overdueRescues?.length) return { notified: 0, overdue: 0 };
+  if (!overdueRescues?.length) return { overdue: 0, links: [] as string[] };
 
   const { data: admins } = await supabase
     .from("volunteers")
@@ -126,7 +89,7 @@ export async function notifyAdminsOfOverdueRescues(overdueDays = 3) {
     .eq("role", "admin")
     .eq("is_active", true);
 
-  if (!admins?.length) return { notified: 0, overdue: overdueRescues.length };
+  if (!admins?.length) return { overdue: overdueRescues.length, links: [] };
 
   const rescueList = overdueRescues
     .map((r: any) => {
@@ -137,15 +100,8 @@ export async function notifyAdminsOfOverdueRescues(overdueDays = 3) {
     .join("\n");
 
   const message =
-    `⚠️ *PawsitiveSpace — Overdue Rescues*\n\n` +
-    `${overdueRescues.length} case(s) are overdue (${overdueDays}+ days):\n\n` +
-    `${rescueList}\n\n` +
-    `Please take action or reassign these cases.`;
+    `⚠️ PawsitiveSpace — ${overdueRescues.length} overdue rescue(s) (${overdueDays}+ days):\n\n${rescueList}`;
 
-  const results = await Promise.allSettled(
-    admins.map((a) => sendWhatsApp(a.whatsapp_number, message))
-  );
-
-  const sent = results.filter((r) => r.status === "fulfilled").length;
-  return { notified: sent, overdue: overdueRescues.length };
+  const links = admins.map((a) => buildWaLink(a.whatsapp_number, message)).filter(Boolean) as string[];
+  return { overdue: overdueRescues.length, links };
 }

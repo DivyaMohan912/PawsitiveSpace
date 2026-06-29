@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase";
 import { notifyFosterOfAdoptionRequest } from "@/lib/whatsapp";
+import { buildWaLink, ORG_WHATSAPP, adoptionConfirmMessage } from "@/lib/click-to-chat";
 
 interface CommitmentFormData {
   animalId: string;
@@ -148,23 +149,13 @@ export async function submitAdoptionCommitment(data: CommitmentFormData) {
       else notifyFosterOfAdoptionRequest(data.animalId, data.fullName, data.mobile, data.adoptionReason).catch((e) => console.error("[Foster Notify Error]", e));
     }
 
-    // 6. Send WhatsApp confirmation (fire-and-forget)
-    try {
-      const baseUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-      await fetch(`${baseUrl}/api/whatsapp/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: data.mobile,
-          message: `🐾 *PawsitiveSpace — Adoption Commitment Signed*\n\nThank you ${data.fullName} for signing the adoption commitment for *${animalName}*.\n\nYour reference number: *${refId}*\n\nOur team will contact you within 24 hours to discuss next steps.\n\n— PawsitiveSpace, Hyderabad`,
-        }),
-      });
-    } catch {
-      // Don't fail the form if WhatsApp fails
-      console.error("WhatsApp send failed, continuing...");
-    }
+    // 6. Build click-to-chat link for the adopter to message the org (no API send)
+    const adopterLink = buildWaLink(
+      ORG_WHATSAPP,
+      adoptionConfirmMessage(data.fullName, animalName, refId),
+    );
 
-    return { success: true, referenceId: refId, animalName };
+    return { success: true, referenceId: refId, animalName, chatLink: adopterLink };
   } catch (err: any) {
     console.error("[Commitment Submit Error]", err);
     return { success: false, error: err.message };
