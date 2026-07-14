@@ -226,6 +226,8 @@ export default function Home() {
       {/* ---- Footer ---- */}
       <footer className="text-center text-xs text-gray-400 pb-8">
         © 2026 PawsitiveSpace · Hyderabad, India · Built with 🐾 ·{" "}
+        <Link href="/about" className="text-brand-orange hover:underline">About</Link>
+        {" · "}
         <Link href="/contact" className="text-brand-orange hover:underline">Contact Us</Link>
       </footer>
     </div>
