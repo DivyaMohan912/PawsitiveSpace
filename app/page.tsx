@@ -99,7 +99,7 @@ interface Listing {
 export default function Home() {
   const supabase = createBrowserClient();
   const [listings, setListings] = useState<Listing[]>([]);
-  const [stats, setStats] = useState({ rescued: 0, adopted: 0, tnr: 0, fosters: 0 });
+  const [stats, setStats] = useState({ rescued: 0, adopted: 0, fosters: 0 });
 
   useEffect(() => {
     loadHomeStats().then(setStats);
@@ -158,11 +158,10 @@ export default function Home() {
 
       {/* ---- Stats Bar ---- */}
       <section className="mx-4 sm:mx-8 lg:mx-auto max-w-6xl -mt-6 relative z-10">
-        <div className="bg-white rounded-2xl shadow-lg grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100">
+        <div className="bg-white rounded-2xl shadow-lg grid grid-cols-3 divide-x divide-gray-100">
           {[
             { value: stats.rescued, label: "RESCUED", color: "text-brand-orange" },
             { value: stats.adopted, label: "ADOPTED", color: "text-green-600" },
-            { value: stats.tnr, label: "TNR CATS", color: "text-brand-amber" },
             { value: stats.fosters, label: "FOSTERS", color: "text-red-500" },
           ].map((s) => (
             <div key={s.label} className="text-center py-6 px-4">

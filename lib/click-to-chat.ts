@@ -61,3 +61,16 @@ export function adoptionConfirmMessage(adopterName: string, animal: string, refI
     `Ref: ${refId}. Tap send and our team will follow up.`
   );
 }
+
+/** Notify someone on the wishlist that a matching animal was just listed. */
+export function matchingWishMessage(
+  requesterName: string,
+  animal: string,
+  listingUrl: string,
+) {
+  return (
+    `🐾 PawsitiveSpace — Good news!\n\n` +
+    `Hi ${requesterName}, a ${animal} matching your adoption request was just listed. ` +
+    `Take a look and reach out if you're interested:\n${listingUrl}`
+  );
+}

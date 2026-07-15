@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
+import { toE164 } from "@/lib/phone";
+import { buildWaLink, matchingWishMessage } from "@/lib/click-to-chat";
 import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 
@@ -13,6 +15,9 @@ export default function ListAdoptionPage() {
   const [error, setError] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [matches, setMatches] = useState<
+    { id: string; requester_name: string; requester_mobile: string; breed: string | null; species: string; species_other: string | null }[]
+  >([]);
   const [form, setForm] = useState({
     species: "dog", species_other: "", breed: "", age: "", gender: "unknown",
     spayed_neutered: false, location: "", description: "",
@@ -55,11 +60,25 @@ export default function ListAdoptionPage() {
       description: form.description || null,
       photos: photos.length > 0 ? photos : [],
       foster_name: form.foster_name,
-      foster_mobile: form.foster_mobile,
+      foster_mobile: toE164(form.foster_mobile),
     });
     setSaving(false);
 
     if (insertErr) { setError(insertErr.message); return; }
+
+    // Notify the wishlist: find open requests for this species and surface them
+    // so the foster can reach out to matching adopters.
+    const { data: wishes } = await supabase
+      .from("adoption_wishes")
+      .select("id, requester_name, requester_mobile, breed, species, species_other")
+      .eq("status", "open")
+      .eq("species", form.species);
+
+    if (wishes && wishes.length > 0) {
+      setMatches(wishes as typeof matches);
+      return; // show matches; foster continues from there
+    }
+
     router.push("/foster/manage");
   }
 
@@ -71,9 +90,50 @@ export default function ListAdoptionPage() {
         <h1 className="font-heading text-3xl font-bold mb-2">Put Up for Adoption</h1>
         <p className="text-gray-500 mb-6">Fosters and community caretakers can list an animal for adoption here.</p>
 
-        {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 mb-4">{error}</div>}
+        {matches.length > 0 ? (
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-2">🎉</div>
+              <h2 className="font-heading text-xl font-bold">Listing posted!</h2>
+              <p className="text-gray-500 text-sm mt-1">
+                {matches.length} {matches.length === 1 ? "person is" : "people are"} looking for a {form.species}. Reach out to let them know it&apos;s available.
+              </p>
+            </div>
+            <div className="space-y-2 mb-5">
+              {matches.map((m) => {
+                const label = m.species === "other" ? m.species_other || "animal" : m.species;
+                const url = typeof window !== "undefined" ? `${window.location.origin}/adopt` : "/adopt";
+                const wa = buildWaLink(
+                  m.requester_mobile,
+                  matchingWishMessage(m.requester_name, `${form.breed ? form.breed + " " : ""}${label}`, url)
+                );
+                return (
+                  <div key={m.id} className="flex items-center justify-between border rounded-xl p-3">
+                    <div>
+                      <p className="font-semibold text-sm">{m.requester_name}</p>
+                      {m.breed && <p className="text-xs text-gray-500">Wants: {m.breed}</p>}
+                    </div>
+                    {wa && (
+                      <a href={wa} target="_blank" rel="noopener noreferrer" className="bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:brightness-110 transition">
+                        Notify
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => router.push("/foster/manage")}
+              className="w-full bg-brand-orange text-white font-bold py-3 rounded-lg hover:brightness-110 transition"
+            >
+              Continue to My Listings
+            </button>
+          </div>
+        ) : (
+          <>
+            {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 mb-4">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Animal *</label>
             <select value={form.species} onChange={(e) => setForm({ ...form, species: e.target.value })} className="w-full border rounded-lg px-3 py-2.5 text-sm">
@@ -151,6 +211,8 @@ export default function ListAdoptionPage() {
             {saving ? "Posting…" : "Post Adoption Listing"}
           </button>
         </form>
+          </>
+        )}
       </div>
     </div>
   );

@@ -5,17 +5,34 @@ import { createAdminClient } from "@/lib/supabase";
 export async function loadHomeStats() {
   const supabase = createAdminClient();
 
-  const [rescues, adoptions, tnr, fosters] = await Promise.all([
-    supabase.from("rescue_cases").select("id", { count: "exact", head: true }),
-    supabase.from("adoptions").select("id", { count: "exact", head: true }),
-    supabase.from("tnr_records").select("id", { count: "exact", head: true }),
-    supabase.from("volunteers").select("id", { count: "exact", head: true }).eq("role", "foster").eq("is_active", true),
+  const [rescued, adoptedAnimals, adoptedListings, fosterRows] = await Promise.all([
+    // Rescued = animals rescued (including those that later passed away),
+    // adopted/fostered are shown separately
+    supabase
+      .from("animals")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["rescued", "deceased"]),
+    // Adopted (rescue/admin flow) = animals whose adoption was approved/completed
+    supabase
+      .from("animals")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "adopted"),
+    // Adopted (foster listing flow) = listings marked adopted
+    supabase
+      .from("adoption_listings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "adopted"),
+    // Foster homes = distinct people who have posted adoption listings
+    supabase.from("adoption_listings").select("foster_mobile"),
   ]);
 
+  const fosterCount = new Set(
+    (fosterRows.data ?? []).map((r: any) => r.foster_mobile).filter(Boolean)
+  ).size;
+
   return {
-    rescued: rescues.count ?? 0,
-    adopted: adoptions.count ?? 0,
-    tnr: tnr.count ?? 0,
-    fosters: fosters.count ?? 0,
+    rescued: rescued.count ?? 0,
+    adopted: (adoptedAnimals.count ?? 0) + (adoptedListings.count ?? 0),
+    fosters: fosterCount,
   };
 }

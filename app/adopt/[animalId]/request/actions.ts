@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase";
 import { notifyFosterOfAdoptionRequest } from "@/lib/whatsapp";
+import { toE164 } from "@/lib/phone";
 
 export async function submitAdoptionRequest(data: {
   listingId: string;
@@ -11,12 +12,16 @@ export async function submitAdoptionRequest(data: {
 }) {
   const supabase = createAdminClient();
 
+  // Store in a single canonical format so the "one active request per person"
+  // rule treats +91 / no-+91 variants of the same number as one person.
+  const mobile = toE164(data.mobile);
+
   try {
     // Check for existing active request
     const { data: existing } = await supabase
       .from("adoption_requests")
       .select("id")
-      .eq("requester_mobile", data.mobile)
+      .eq("requester_mobile", mobile)
       .in("status", ["pending", "approved"])
       .limit(1);
 
@@ -39,7 +44,7 @@ export async function submitAdoptionRequest(data: {
       listing_id: data.listingId,
       commitment_id: commitmentUuid,
       requester_name: data.name,
-      requester_mobile: data.mobile,
+      requester_mobile: mobile,
       status: "pending",
     });
 

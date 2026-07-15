@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { label: "Cases", href: "/admin/cases", icon: "🚨" },
   { label: "Animals", href: "/admin/animals", icon: "🐾" },
   { label: "Adoptions", href: "/admin/adoptions", icon: "🏠" },
+  { label: "Wishlist", href: "/admin/wishes", icon: "🙋" },
   { label: "TNR", href: "/admin/tnr", icon: "✂️" },
   { label: "Volunteers", href: "/admin/volunteers", icon: "👥" },
   { label: "Reach Out", href: "/admin/reach-out", icon: "📞" },

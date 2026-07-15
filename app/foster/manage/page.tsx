@@ -6,10 +6,11 @@ import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import MaskedPhone from "@/components/admin/MaskedPhone";
-import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction, reopenListing as reopenListingAction } from "./actions";
+import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction, reopenListing as reopenListingAction, markWishFulfilled as markWishFulfilledAction } from "./actions";
 import { sendOtp, verifyOtp } from "@/app/shared-actions";
 import ShareToInstagram from "@/components/ShareToInstagram";
 import { buildAdoptionCaption } from "@/lib/instagram";
+import { buildWaLink } from "@/lib/click-to-chat";
 
 interface Listing {
   id: string;
@@ -35,25 +36,40 @@ interface Request {
   adoption_reason: string | null;
 }
 
+interface Wish {
+  id: string;
+  species: string;
+  species_other: string | null;
+  breed: string | null;
+  age_preference: string | null;
+  location: string | null;
+  notes: string | null;
+  requester_name: string;
+  requester_mobile: string;
+  created_at: string;
+}
+
 export default function FosterManagePage() {
   const router = useRouter();
   const [mobile, setMobile] = useState("");
   const [verified, setVerified] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [requests, setRequests] = useState<Request[]>([]);
+  const [wishes, setWishes] = useState<Wish[]>([]);
   const [saving, setSaving] = useState(false);
-
   // OTP state
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState("");
+  const [devCode, setDevCode] = useState("");
 
   const load = useCallback(async () => {
     if (!mobile) return;
     const data = await loadFosterData(mobile);
     setListings(data.listings as Listing[]);
     setRequests(data.requests as Request[]);
+    setWishes((data.wishes ?? []) as Wish[]);
   }, [mobile]);
 
   useEffect(() => { if (verified) load(); }, [verified, load]);
@@ -86,6 +102,13 @@ export default function FosterManagePage() {
     load();
   }
 
+  async function markWishFulfilled(wishId: string) {
+    setSaving(true);
+    await markWishFulfilledAction(wishId);
+    setSaving(false);
+    load();
+  }
+
   if (!verified) {
     return (
       <div className="min-h-screen bg-brand-cream">
@@ -112,8 +135,9 @@ export default function FosterManagePage() {
                     const res = await sendOtp(mobile.trim());
                     if (res.success) {
                       setOtpSent(true);
+                      if ("devCode" in res && res.devCode) setDevCode(res.devCode);
                     } else {
-                      setOtpError(res.error || "Failed to send OTP");
+                      setOtpError(("error" in res && res.error) || "Failed to send OTP");
                     }
                     setOtpLoading(false);
                   }}
@@ -127,6 +151,11 @@ export default function FosterManagePage() {
               <>
                 <p className="text-sm text-gray-500 mb-1">Code sent to <strong>{mobile}</strong>.</p>
                 <p className="text-xs text-gray-400 mb-4">Check your SMS or email inbox.</p>
+                {devCode && (
+                  <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-2 mb-3">
+                    Dev mode (no SMS/email provider configured): your code is <strong className="font-mono">{devCode}</strong>
+                  </p>
+                )}
                 {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
                 <input
                   value={otp}
@@ -157,7 +186,7 @@ export default function FosterManagePage() {
                   {otpLoading ? "Verifying…" : "Verify OTP"}
                 </button>
                 <button
-                  onClick={() => { setOtpSent(false); setOtp(""); setOtpError(""); }}
+                  onClick={() => { setOtpSent(false); setOtp(""); setOtpError(""); setDevCode(""); }}
                   className="w-full text-sm text-gray-500 hover:text-brand-orange"
                 >
                   ← Change number
@@ -186,6 +215,67 @@ export default function FosterManagePage() {
             </Link>
           </div>
         </div>
+
+        {/* Community wishlist — people looking for animals not yet listed */}
+        {wishes.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">🙋</span>
+              <h2 className="font-heading text-lg font-bold">Community Wishlist</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              People looking for a specific animal that isn&apos;t listed yet. If you have a match, reach out to them directly.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {wishes.map((w) => {
+                const label = w.species === "other" ? (w.species_other || "Other") : w.species;
+                const wa = buildWaLink(
+                  w.requester_mobile,
+                  `Hi ${w.requester_name}, this is a PawsitiveSpace foster. I saw your request for a ${w.breed ? w.breed + " " : ""}${label} and may have a match for you.`
+                );
+                return (
+                  <div key={w.id} className="bg-white rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <AnimalAvatar species={w.species === "cat" || w.species === "dog" ? w.species : "other"} size={32} />
+                      <p className="font-bold text-sm capitalize">
+                        {w.breed ? `${w.breed} ` : ""}{label}
+                        {w.age_preference ? <span className="font-normal text-gray-500"> · {w.age_preference}</span> : null}
+                      </p>
+                    </div>
+                    {w.location && <p className="text-xs text-gray-500">📍 {w.location}</p>}
+                    {w.notes && <p className="text-sm text-gray-600 mt-1">{w.notes}</p>}
+                    <div className="flex items-center justify-between mt-3">
+                      <div>
+                        <p className="text-xs text-gray-500">{w.requester_name}</p>
+                        <MaskedPhone number={w.requester_mobile} />
+                      </div>
+                      {wa && (
+                        <a
+                          href={wa}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:brightness-110 transition"
+                        >
+                          Message
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-[10px] text-gray-400">{new Date(w.created_at).toLocaleDateString()}</p>
+                      <button
+                        onClick={() => markWishFulfilled(w.id)}
+                        disabled={saving}
+                        className="text-xs font-semibold text-gray-400 hover:text-brand-orange disabled:opacity-50"
+                      >
+                        Mark fulfilled ✓
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {listings.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center">

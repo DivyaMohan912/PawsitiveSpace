@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
+import { toE164 } from "@/lib/phone";
 import PublicNav from "@/components/PublicNav";
 
 export default function EditListingPage() {
@@ -72,7 +73,7 @@ export default function EditListingPage() {
       description: form.description || null,
       photos: photos,
       foster_name: form.foster_name,
-      foster_mobile: form.foster_mobile,
+      foster_mobile: toE164(form.foster_mobile),
     }).eq("id", listingId);
 
     setSaving(false);

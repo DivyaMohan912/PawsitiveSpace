@@ -1,12 +1,31 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase";
+import { isEmail, phoneKey, toE164 } from "@/lib/phone";
 
 // In-memory OTP store (for production, use Redis or DB)
 const otpStore = new Map<string, { code: string; expiresAt: number }>();
 
-function isEmail(id: string) {
-  return /.+@.+\..+/.test(id);
+/**
+ * Canonical key an OTP is stored/looked-up under. Emails are lower-cased;
+ * phone numbers are reduced to their last 10 digits so that the code works
+ * regardless of whether the user typed `+91` or not.
+ */
+function otpKey(identifier: string): string {
+  return isEmail(identifier) ? identifier.trim().toLowerCase() : phoneKey(identifier);
+}
+
+/**
+ * When no SMS/email provider is configured we can't actually deliver the code.
+ * Outside production we surface it so local development is not blocked; in
+ * production we fail with the original "not configured" error.
+ */
+function devFallback(code: string, channel: "email" | "sms", error: string) {
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(`[OTP] ${channel} provider not configured — dev code: ${code}`);
+    return { success: true, channel, devCode: code as string | undefined };
+  }
+  return { success: false, error, channel };
 }
 
 /**
@@ -18,7 +37,7 @@ export async function sendOtp(identifier: string) {
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
   const channel: "email" | "sms" = isEmail(identifier) ? "email" : "sms";
 
-  otpStore.set(identifier, { code, expiresAt });
+  otpStore.set(otpKey(identifier), { code, expiresAt });
 
   try {
     if (channel === "email") {
@@ -26,7 +45,7 @@ export async function sendOtp(identifier: string) {
       const from = process.env.OTP_EMAIL_FROM || "PawsitiveSpace <noreply@pawsitivespace.org>";
       if (!key) {
         console.error("[OTP] RESEND_API_KEY missing");
-        return { success: false, error: "Email service not configured.", channel };
+        return devFallback(code, channel, "Email service not configured.");
       }
       const resp = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -48,9 +67,9 @@ export async function sendOtp(identifier: string) {
       const from = process.env.TWILIO_SMS_FROM;
       if (!sid || !token || !from) {
         console.error("[OTP] Twilio SMS credentials missing");
-        return { success: false, error: "SMS service not configured.", channel };
+        return devFallback(code, channel, "SMS service not configured.");
       }
-      const to = identifier.startsWith("+") ? identifier : `+${identifier}`;
+      const to = toE164(identifier);
       const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
       const auth = Buffer.from(`${sid}:${token}`).toString("base64");
       const resp = await fetch(url, {
@@ -76,14 +95,14 @@ export async function sendOtp(identifier: string) {
 }
 
 export async function verifyOtp(identifier: string, code: string) {
-  const stored = otpStore.get(identifier);
+  const stored = otpStore.get(otpKey(identifier));
 
   if (!stored) {
     return { success: false, error: "OTP expired or not found. Request a new one." };
   }
 
   if (Date.now() > stored.expiresAt) {
-    otpStore.delete(identifier);
+    otpStore.delete(otpKey(identifier));
     return { success: false, error: "OTP has expired. Request a new one." };
   }
 
@@ -91,7 +110,7 @@ export async function verifyOtp(identifier: string, code: string) {
     return { success: false, error: "Incorrect OTP. Please try again." };
   }
 
-  otpStore.delete(identifier);
+  otpStore.delete(otpKey(identifier));
   return { success: true };
 }
 
