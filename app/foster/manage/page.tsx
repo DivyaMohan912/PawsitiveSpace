@@ -119,20 +119,28 @@ export default function FosterManagePage() {
 
             {!otpSent ? (
               <>
-                <p className="text-sm text-gray-500 mb-4">Enter the mobile number or email you used when creating your listing. We&apos;ll send a one-time code to verify.</p>
+                <p className="text-sm text-gray-500 mb-4">Enter the WhatsApp number you used when creating your listing. We&apos;ll send a one-time code to verify.</p>
                 {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
-                <input
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  placeholder="+91 98765 43210 or you@email.com"
-                  className="w-full border rounded-lg px-3 py-2.5 text-sm mb-3"
-                />
+                <div className="flex items-stretch mb-3">
+                  <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 bg-gray-50 text-sm text-gray-600 font-medium select-none">+91</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    placeholder="98765 43210"
+                    className="w-full border rounded-r-lg px-3 py-2.5 text-sm tracking-wide"
+                  />
+                </div>
                 <button
                   onClick={async () => {
-                    if (!mobile.trim()) return;
+                    if (mobile.length !== 10) {
+                      setOtpError("Enter your 10-digit mobile number");
+                      return;
+                    }
                     setOtpLoading(true);
                     setOtpError("");
-                    const res = await sendOtp(mobile.trim());
+                    const res = await sendOtp(`+91${mobile}`);
                     if (res.success) {
                       setOtpSent(true);
                       if ("devCode" in res && res.devCode) setDevCode(res.devCode);
@@ -149,11 +157,11 @@ export default function FosterManagePage() {
               </>
             ) : (
               <>
-                <p className="text-sm text-gray-500 mb-1">Code sent to <strong>{mobile}</strong>.</p>
-                <p className="text-xs text-gray-400 mb-4">Check your SMS or email inbox.</p>
+                <p className="text-sm text-gray-500 mb-1">Code sent to <strong>+91 {mobile}</strong>.</p>
+                <p className="text-xs text-gray-400 mb-4">Check your WhatsApp messages.</p>
                 {devCode && (
                   <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-2 mb-3">
-                    Dev mode (no SMS/email provider configured): your code is <strong className="font-mono">{devCode}</strong>
+                    Dev mode (no WhatsApp provider configured): your code is <strong className="font-mono">{devCode}</strong>
                   </p>
                 )}
                 {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
@@ -172,7 +180,7 @@ export default function FosterManagePage() {
                     }
                     setOtpLoading(true);
                     setOtpError("");
-                    const res = await verifyOtp(mobile.trim(), otp);
+                    const res = await verifyOtp(`+91${mobile}`, otp);
                     if (res.success) {
                       setVerified(true);
                     } else {

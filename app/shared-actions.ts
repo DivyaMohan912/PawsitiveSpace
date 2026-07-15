@@ -20,7 +20,7 @@ function otpKey(identifier: string): string {
  * Outside production we surface it so local development is not blocked; in
  * production we fail with the original "not configured" error.
  */
-function devFallback(code: string, channel: "email" | "sms", error: string) {
+function devFallback(code: string, channel: "email" | "whatsapp", error: string) {
   if (process.env.NODE_ENV !== "production") {
     console.warn(`[OTP] ${channel} provider not configured — dev code: ${code}`);
     return { success: true, channel, devCode: code as string | undefined };
@@ -29,13 +29,14 @@ function devFallback(code: string, channel: "email" | "sms", error: string) {
 }
 
 /**
- * Send a 6-digit OTP via Email or SMS (no WhatsApp API). Detects channel from
- * the identifier: anything with "@" is emailed (Resend), otherwise SMS (Twilio).
+ * Send a 6-digit OTP via Email or WhatsApp. Detects channel from the
+ * identifier: anything with "@" is emailed (Resend), otherwise the code is
+ * delivered over WhatsApp (Twilio).
  */
 export async function sendOtp(identifier: string) {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
-  const channel: "email" | "sms" = isEmail(identifier) ? "email" : "sms";
+  const channel: "email" | "whatsapp" = isEmail(identifier) ? "email" : "whatsapp";
 
   otpStore.set(otpKey(identifier), { code, expiresAt });
 
@@ -64,12 +65,14 @@ export async function sendOtp(identifier: string) {
     } else {
       const sid = process.env.TWILIO_ACCOUNT_SID;
       const token = process.env.TWILIO_AUTH_TOKEN;
-      const from = process.env.TWILIO_SMS_FROM;
-      if (!sid || !token || !from) {
-        console.error("[OTP] Twilio SMS credentials missing");
-        return devFallback(code, channel, "SMS service not configured.");
+      const fromRaw = process.env.TWILIO_WHATSAPP_FROM;
+      if (!sid || !token || !fromRaw) {
+        console.error("[OTP] Twilio WhatsApp credentials missing");
+        return devFallback(code, channel, "WhatsApp service not configured.");
       }
-      const to = toE164(identifier);
+      // Twilio WhatsApp senders/recipients must be prefixed with `whatsapp:`.
+      const from = fromRaw.startsWith("whatsapp:") ? fromRaw : `whatsapp:${fromRaw}`;
+      const to = `whatsapp:${toE164(identifier)}`;
       const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
       const auth = Buffer.from(`${sid}:${token}`).toString("base64");
       const resp = await fetch(url, {
@@ -82,7 +85,7 @@ export async function sendOtp(identifier: string) {
         }),
       });
       if (!resp.ok) {
-        console.error("[OTP SMS Error]", await resp.json());
+        console.error("[OTP WhatsApp Error]", await resp.json());
         return { success: false, error: "Failed to send OTP. Please try again.", channel };
       }
     }
