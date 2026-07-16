@@ -56,7 +56,7 @@ export default function ReportsPage() {
 
   return (
     <div>
-      <h1 className="font-heading text-2xl font-bold mb-6">WhatsApp Reports</h1>
+      <h1 className="font-heading text-2xl font-bold mb-6">Message Logs</h1>
 
       <div className="flex flex-wrap gap-3 mb-5">
         <select value={intentFilter} onChange={(e) => setIntentFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm">

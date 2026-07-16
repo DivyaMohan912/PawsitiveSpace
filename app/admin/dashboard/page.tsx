@@ -12,6 +12,14 @@ interface Metrics {
   tnrThisMonth: number;
 }
 
+interface Perf {
+  rescueTotal: number;
+  rescueResolved: number;
+  adoptionTotal: number;
+  adoptionCompleted: number;
+  trend: { label: string; rescues: number; adoptions: number }[];
+}
+
 interface ActivityItem {
   id: string;
   type: "rescue" | "adoption";
@@ -33,6 +41,7 @@ interface UrgentCase {
 export default function Dashboard() {
   const supabase = createBrowserClient();
   const [metrics, setMetrics] = useState<Metrics>({ openCases: 0, inCare: 0, pendingAdoptions: 0, tnrThisMonth: 0 });
+  const [perf, setPerf] = useState<Perf>({ rescueTotal: 0, rescueResolved: 0, adoptionTotal: 0, adoptionCompleted: 0, trend: [] });
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [urgent, setUrgent] = useState<UrgentCase[]>([]);
 
@@ -45,7 +54,7 @@ export default function Dashboard() {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const [openRes, careRes, adoptRes, tnrRes, casesRes, adoptionsRes, urgentRes] = await Promise.all([
+    const [openRes, careRes, adoptRes, tnrRes, casesRes, adoptionsRes, urgentRes, allCasesRes, allAdoptionsRes] = await Promise.all([
       supabase.from("rescue_cases").select("id", { count: "exact", head: true }).eq("status", "open"),
       supabase.from("animals").select("id", { count: "exact", head: true }).in("status", ["rescued", "fostered"]),
       supabase.from("adoptions").select("id", { count: "exact", head: true }).in("status", ["enquiry", "application"]),
@@ -53,6 +62,8 @@ export default function Dashboard() {
       supabase.from("rescue_cases").select("id, status, created_at, animals(name), reporters(whatsapp_number)").order("created_at", { ascending: false }).limit(10),
       supabase.from("adoptions").select("id, status, created_at, animals(name), adopter_whatsapp").order("created_at", { ascending: false }).limit(10),
       supabase.from("rescue_cases").select("id, animal_id, case_notes, created_at, animals(species, location_description)").eq("status", "open").lt("created_at", dayAgo).order("created_at", { ascending: true }).limit(10),
+      supabase.from("rescue_cases").select("status, created_at"),
+      supabase.from("adoptions").select("status, created_at"),
     ]);
 
     setMetrics({
@@ -60,6 +71,35 @@ export default function Dashboard() {
       inCare: careRes.count ?? 0,
       pendingAdoptions: adoptRes.count ?? 0,
       tnrThisMonth: tnrRes.count ?? 0,
+    });
+
+    // Success rates + 12-month trend
+    const allCases = (allCasesRes.data ?? []) as { status: string; created_at: string }[];
+    const allAdoptions = (allAdoptionsRes.data ?? []) as { status: string; created_at: string }[];
+
+    const monthKeys: { key: string; label: string }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthKeys.push({ key: `${m.getFullYear()}-${m.getMonth()}`, label: m.toLocaleString("default", { month: "short" }) });
+    }
+    const bucket = (rows: { created_at: string }[]) => {
+      const map: Record<string, number> = {};
+      for (const r of rows) {
+        const d = new Date(r.created_at);
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        map[key] = (map[key] ?? 0) + 1;
+      }
+      return map;
+    };
+    const caseBucket = bucket(allCases);
+    const adoptBucket = bucket(allAdoptions);
+
+    setPerf({
+      rescueTotal: allCases.length,
+      rescueResolved: allCases.filter((c) => c.status === "resolved" || c.status === "closed").length,
+      adoptionTotal: allAdoptions.length,
+      adoptionCompleted: allAdoptions.filter((a) => a.status === "completed").length,
+      trend: monthKeys.map((m) => ({ label: m.label, rescues: caseBucket[m.key] ?? 0, adoptions: adoptBucket[m.key] ?? 0 })),
     });
 
     // Merge and sort activity
@@ -124,6 +164,49 @@ export default function Dashboard() {
             <p className="text-sm font-semibold text-gray-500 mt-1">{m.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Performance: success rates + 12-month trend */}
+      <div className="grid lg:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-2xl p-5 flex flex-col justify-center">
+          <p className="text-sm font-semibold text-gray-500">Rescue success rate</p>
+          <p className="text-4xl font-heading font-bold text-green-600 mt-1">
+            {perf.rescueTotal ? Math.round((perf.rescueResolved / perf.rescueTotal) * 100) : 0}%
+          </p>
+          <p className="text-xs text-gray-400 mt-1">{perf.rescueResolved} resolved/closed of {perf.rescueTotal} total cases</p>
+        </div>
+        <div className="bg-white rounded-2xl p-5 flex flex-col justify-center">
+          <p className="text-sm font-semibold text-gray-500">Adoption success rate</p>
+          <p className="text-4xl font-heading font-bold text-brand-orange mt-1">
+            {perf.adoptionTotal ? Math.round((perf.adoptionCompleted / perf.adoptionTotal) * 100) : 0}%
+          </p>
+          <p className="text-xs text-gray-400 mt-1">{perf.adoptionCompleted} completed of {perf.adoptionTotal} total enquiries</p>
+        </div>
+        <div className="bg-white rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-500">Last 12 months</p>
+            <div className="flex items-center gap-3 text-xs text-gray-400">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> Rescues</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> Adoptions</span>
+            </div>
+          </div>
+          {(() => {
+            const max = Math.max(1, ...perf.trend.map((t) => Math.max(t.rescues, t.adoptions)));
+            return (
+              <div className="flex items-end gap-1 h-24">
+                {perf.trend.map((t, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1" title={`${t.label}: ${t.rescues} rescues, ${t.adoptions} adoptions`}>
+                    <div className="w-full flex items-end justify-center gap-0.5 h-20">
+                      <div className="w-1/2 bg-red-400 rounded-t" style={{ height: `${(t.rescues / max) * 100}%` }} />
+                      <div className="w-1/2 bg-amber-400 rounded-t" style={{ height: `${(t.adoptions / max) * 100}%` }} />
+                    </div>
+                    <span className="text-[9px] text-gray-400">{t.label}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { label: "TNR", href: "/admin/tnr", icon: "✂️" },
   { label: "Volunteers", href: "/admin/volunteers", icon: "👥" },
   { label: "Reach Out", href: "/admin/reach-out", icon: "📞" },
-  { label: "Reports", href: "/admin/reports", icon: "💬" },
+  { label: "Message Logs", href: "/admin/reports", icon: "💬" },
 ];
 
 const MOBILE_ITEMS = NAV_ITEMS.slice(0, 5); // first 5 for bottom bar

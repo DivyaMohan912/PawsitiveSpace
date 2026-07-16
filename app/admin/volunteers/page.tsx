@@ -27,13 +27,26 @@ const EMPTY = { name: "", whatsapp_number: "", email: "", role: "rescuer", is_ac
 export default function VolunteersPage() {
   const supabase = createBrowserClient();
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
+  const [rescueStats, setRescueStats] = useState<Record<string, { picked: number; resolved: number }>>({});
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<typeof EMPTY & { id?: string }>(EMPTY);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("volunteers").select("*").order("created_at", { ascending: false });
-    setVolunteers((data ?? []) as Volunteer[]);
+    const [volRes, caseRes] = await Promise.all([
+      supabase.from("volunteers").select("*").order("created_at", { ascending: false }),
+      supabase.from("rescue_cases").select("assigned_to, status").not("assigned_to", "is", null),
+    ]);
+    setVolunteers((volRes.data ?? []) as Volunteer[]);
+
+    const stats: Record<string, { picked: number; resolved: number }> = {};
+    for (const c of (caseRes.data ?? []) as { assigned_to: string; status: string }[]) {
+      const s = stats[c.assigned_to] ?? { picked: 0, resolved: 0 };
+      s.picked += 1;
+      if (c.status === "resolved" || c.status === "closed") s.resolved += 1;
+      stats[c.assigned_to] = s;
+    }
+    setRescueStats(stats);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -96,6 +109,8 @@ export default function VolunteersPage() {
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">WhatsApp</th>
                 <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3 text-center">Rescues Picked</th>
+                <th className="px-4 py-3 text-center">Resolved</th>
                 <th className="px-4 py-3 hidden sm:table-cell">Area</th>
                 <th className="px-4 py-3">Active</th>
                 <th className="px-4 py-3">Actions</th>
@@ -111,6 +126,15 @@ export default function VolunteersPage() {
                       {v.role}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-center font-bold text-gray-700">{rescueStats[v.id]?.picked ?? 0}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="font-bold text-green-600">{rescueStats[v.id]?.resolved ?? 0}</span>
+                    {(rescueStats[v.id]?.picked ?? 0) > 0 && (
+                      <span className="text-xs text-gray-400 ml-1">
+                        ({Math.round(((rescueStats[v.id]?.resolved ?? 0) / (rescueStats[v.id]?.picked ?? 1)) * 100)}%)
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 hidden sm:table-cell text-gray-500">{v.area_coverage ?? "—"}</td>
                   <td className="px-4 py-3">
                     <button
@@ -125,7 +149,7 @@ export default function VolunteersPage() {
                   </td>
                 </tr>
               ))}
-              {volunteers.length === 0 && <tr><td colSpan={6} className="text-center py-12 text-gray-400">No volunteers yet</td></tr>}
+              {volunteers.length === 0 && <tr><td colSpan={8} className="text-center py-12 text-gray-400">No volunteers yet</td></tr>}
             </tbody>
           </table>
         </div>
