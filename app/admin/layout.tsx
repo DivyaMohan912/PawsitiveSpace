@@ -7,17 +7,17 @@ import { createBrowserClient } from "@/lib/supabase";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin/dashboard", icon: "📊" },
-  { label: "Cases", href: "/admin/cases", icon: "🚨" },
-  { label: "Animals", href: "/admin/animals", icon: "🐾" },
-  { label: "Adoptions", href: "/admin/adoptions", icon: "🏠" },
-  { label: "Wishlist", href: "/admin/wishes", icon: "🙋" },
-  { label: "TNR", href: "/admin/tnr", icon: "✂️" },
   { label: "Volunteers", href: "/admin/volunteers", icon: "👥" },
+  { label: "Cases", href: "/admin/cases", icon: "🚨" },
   { label: "Reach Out", href: "/admin/reach-out", icon: "📞" },
   { label: "Message Logs", href: "/admin/reports", icon: "💬" },
+  { label: "Adoptions", href: "/admin/adoptions", icon: "🏠" },
+  { label: "Wishlist", href: "/admin/wishes", icon: "🙋" },
+  { label: "Animals", href: "/admin/animals", icon: "🐾" },
+  { label: "TNR", href: "/admin/tnr", icon: "✂️" },
 ];
 
-const MOBILE_ITEMS = NAV_ITEMS.slice(0, 5); // first 5 for bottom bar
+const MOBILE_ITEMS = NAV_ITEMS; // all items in the scrollable bottom bar
 
 const roleBadge: Record<string, string> = {
   admin: "bg-purple-100 text-purple-700",
@@ -138,14 +138,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </main>
 
       {/* ---- Mobile Bottom Nav ---- */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex z-30">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex overflow-x-auto z-30">
         {MOBILE_ITEMS.map((item) => {
           const active = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 flex flex-col items-center py-2 text-[10px] font-semibold
+              className={`flex-shrink-0 min-w-[64px] flex flex-col items-center py-2 text-[10px] font-semibold
                 ${active ? "text-brand-orange" : "text-gray-400"}`}
             >
               <span className="text-lg">{item.icon}</span>

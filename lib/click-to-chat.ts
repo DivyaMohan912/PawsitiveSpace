@@ -5,7 +5,7 @@
 
 /** Org/public WhatsApp number shown to the public for click-to-chat. */
 export const ORG_WHATSAPP =
-  process.env.NEXT_PUBLIC_ORG_WHATSAPP || process.env.ADMIN_WHATSAPP || "+919988778877";
+  process.env.NEXT_PUBLIC_ORG_WHATSAPP || process.env.ADMIN_WHATSAPP || "+919346254625";
 
 /** Strip everything except digits so wa.me accepts the number. */
 export function digitsOnly(num?: string | null): string {
