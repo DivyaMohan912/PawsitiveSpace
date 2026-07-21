@@ -146,18 +146,26 @@ export async function registerVolunteer(data: {
   name: string;
   mobile: string;
   location: string;
-  role: string;
+  roles: string[];
   availability: string;
   reason: string;
 }) {
   const supabase = createAdminClient();
+
+  const validRoles = ["rescuer", "foster", "transporter"];
+  const interests = data.roles.filter((r) => validRoles.includes(r));
+  if (interests.length === 0) interests.push("rescuer");
+  const role = interests[0];
 
   // Insert into volunteers table
   const { error } = await supabase.from("volunteers").insert({
     name: data.name,
     whatsapp_number: data.mobile,
     area_coverage: data.location,
-    role: data.role === "foster" ? "foster" : "rescuer",
+    role,
+    interests,
+    availability: data.availability || null,
+    motivation: data.reason || null,
     is_active: true,
   });
 

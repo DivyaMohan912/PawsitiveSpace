@@ -243,14 +243,27 @@ function VolunteerRegistration() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
-    name: "", mobile: "", location: "", role: "rescuer",
+    name: "", mobile: "", location: "", roles: ["rescuer"] as string[],
     availability: "weekends", reason: "",
   });
+
+  function toggleRole(value: string) {
+    setForm((f) => ({
+      ...f,
+      roles: f.roles.includes(value)
+        ? f.roles.filter((r) => r !== value)
+        : [...f.roles, value],
+    }));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim() || !form.mobile.trim() || !form.location.trim()) {
       setError("Name, mobile and location are required.");
+      return;
+    }
+    if (form.roles.length === 0) {
+      setError("Please select at least one way you'd like to help.");
       return;
     }
     setError("");
@@ -333,16 +346,24 @@ function VolunteerRegistration() {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">I want to volunteer for *</label>
-              <select
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2.5 text-sm"
-              >
-                <option value="rescuer">🚑 Rescue — Help rescue animals in distress</option>
-                <option value="foster">🏠 Foster — Provide temporary home for animals</option>
-                <option value="transporter">🚗 Transport — Help transport animals</option>
-              </select>
+              <label className="block text-sm font-bold text-gray-700 mb-1">I want to volunteer for * <span className="font-normal text-gray-400">(select all that apply)</span></label>
+              <div className="space-y-2 pt-1">
+                {[
+                  { value: "rescuer", label: "🚑 Rescue — Help rescue animals in distress" },
+                  { value: "foster", label: "🏠 Foster — Provide temporary home for animals" },
+                  { value: "transporter", label: "🚗 Transport — Help transport animals" },
+                ].map((opt) => (
+                  <label key={opt.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.roles.includes(opt.value)}
+                      onChange={() => toggleRole(opt.value)}
+                      className="w-4 h-4 accent-brand-orange"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Availability *</label>

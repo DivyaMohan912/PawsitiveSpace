@@ -11,8 +11,18 @@ interface Volunteer {
   role: string;
   is_active: boolean;
   area_coverage: string | null;
+  availability: string | null;
+  motivation: string | null;
+  interests: string[] | null;
   created_at: string;
 }
+
+const AVAILABILITY_LABELS: Record<string, string> = {
+  weekdays: "Weekdays only",
+  weekends: "Weekends only",
+  both: "Weekdays & Weekends",
+  flexible: "Flexible / On-call",
+};
 
 const ROLES = ["rescuer", "foster", "transporter", "admin"];
 const ROLE_COLORS: Record<string, string> = {
@@ -112,6 +122,7 @@ export default function VolunteersPage() {
                 <th className="px-4 py-3 text-center">Rescues Picked</th>
                 <th className="px-4 py-3 text-center">Resolved</th>
                 <th className="px-4 py-3 hidden sm:table-cell">Area</th>
+                <th className="px-4 py-3 hidden md:table-cell">Availability</th>
                 <th className="px-4 py-3">Active</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
@@ -119,12 +130,23 @@ export default function VolunteersPage() {
             <tbody className="divide-y divide-gray-50">
               {volunteers.map((v) => (
                 <tr key={v.id} className="hover:bg-orange-50/50">
-                  <td className="px-4 py-3 font-semibold">{v.name}</td>
+                  <td className="px-4 py-3 font-semibold">
+                    {v.name}
+                    {v.motivation && (
+                      <span className="block font-normal text-xs text-gray-400 max-w-[220px] truncate" title={v.motivation}>
+                        “{v.motivation}”
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-mono text-gray-500 text-xs">{v.whatsapp_number}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${ROLE_COLORS[v.role] ?? "bg-gray-100"}`}>
-                      {v.role}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {(v.interests && v.interests.length > 0 ? v.interests : [v.role]).map((r) => (
+                        <span key={r} className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${ROLE_COLORS[r] ?? "bg-gray-100"}`}>
+                          {r}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-center font-bold text-gray-700">{rescueStats[v.id]?.picked ?? 0}</td>
                   <td className="px-4 py-3 text-center">
@@ -136,6 +158,7 @@ export default function VolunteersPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell text-gray-500">{v.area_coverage ?? "—"}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-gray-500">{v.availability ? (AVAILABILITY_LABELS[v.availability] ?? v.availability) : "—"}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => toggleActive(v)}
@@ -149,7 +172,7 @@ export default function VolunteersPage() {
                   </td>
                 </tr>
               ))}
-              {volunteers.length === 0 && <tr><td colSpan={8} className="text-center py-12 text-gray-400">No volunteers yet</td></tr>}
+              {volunteers.length === 0 && <tr><td colSpan={9} className="text-center py-12 text-gray-400">No volunteers yet</td></tr>}
             </tbody>
           </table>
         </div>
