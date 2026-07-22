@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { createBrowserClient } from "@/lib/supabase";
-import MaskedPhone from "@/components/admin/MaskedPhone";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import { buildWaLink } from "@/lib/click-to-chat";
 
@@ -132,7 +131,9 @@ export default function AdminWishesPage() {
                 <div className="mt-auto pt-3 border-t border-gray-50">
                   <p className="text-xs font-semibold text-gray-700">{w.requester_name}</p>
                   <div className="flex items-center justify-between">
-                    <MaskedPhone number={w.requester_mobile} />
+                    <a href={`tel:${w.requester_mobile}`} className="font-mono text-sm text-brand-orange font-semibold hover:underline">
+                      {w.requester_mobile}
+                    </a>
                     {wa && (
                       <a href={wa} target="_blank" rel="noopener noreferrer" className="text-green-600 text-xs font-bold hover:underline">
                         Message

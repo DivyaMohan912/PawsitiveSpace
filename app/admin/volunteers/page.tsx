@@ -32,7 +32,7 @@ const ROLE_COLORS: Record<string, string> = {
   admin: "bg-purple-100 text-purple-700",
 };
 
-const EMPTY = { name: "", whatsapp_number: "", email: "", role: "rescuer", is_active: true, area_coverage: "" };
+const EMPTY = { name: "", whatsapp_number: "", email: "", role: "rescuer", is_active: true, area_coverage: "", availability: "" };
 
 export default function VolunteersPage() {
   const supabase = createBrowserClient();
@@ -62,7 +62,7 @@ export default function VolunteersPage() {
   useEffect(() => { load(); }, [load]);
 
   function openEdit(v: Volunteer) {
-    setForm({ id: v.id, name: v.name, whatsapp_number: v.whatsapp_number, email: v.email ?? "", role: v.role, is_active: v.is_active, area_coverage: v.area_coverage ?? "" });
+    setForm({ id: v.id, name: v.name, whatsapp_number: v.whatsapp_number, email: v.email ?? "", role: v.role, is_active: v.is_active, area_coverage: v.area_coverage ?? "", availability: v.availability ?? "" });
     setModal(true);
   }
 
@@ -80,6 +80,7 @@ export default function VolunteersPage() {
       role: form.role,
       is_active: form.is_active,
       area_coverage: form.area_coverage || null,
+      availability: form.availability || null,
     };
 
     if (form.id) {
@@ -119,10 +120,10 @@ export default function VolunteersPage() {
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">WhatsApp</th>
                 <th className="px-4 py-3">Role</th>
-                <th className="px-4 py-3 text-center">Rescues Picked</th>
-                <th className="px-4 py-3 text-center">Resolved</th>
-                <th className="px-4 py-3 hidden sm:table-cell">Area</th>
-                <th className="px-4 py-3 hidden md:table-cell">Availability</th>
+                <th className="px-4 py-3 text-center hidden lg:table-cell">Rescues Picked</th>
+                <th className="px-4 py-3 text-center hidden lg:table-cell">Resolved</th>
+                <th className="px-4 py-3">Area</th>
+                <th className="px-4 py-3">Availability</th>
                 <th className="px-4 py-3">Active</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
@@ -133,14 +134,10 @@ export default function VolunteersPage() {
                   <td className="px-4 py-3 font-semibold align-top">
                     {v.name}
                     {v.motivation && (
-                      <span className="block font-normal text-xs text-gray-400 md:max-w-[220px] md:truncate" title={v.motivation}>
+                      <span className="hidden lg:block font-normal text-xs text-gray-400 lg:max-w-[220px] lg:truncate" title={v.motivation}>
                         “{v.motivation}”
                       </span>
                     )}
-                    {/* Mobile-only: availability (column hidden below md) */}
-                    <span className="md:hidden block font-normal text-xs text-gray-500 mt-1">
-                      🗓 {v.availability ? (AVAILABILITY_LABELS[v.availability] ?? v.availability) : "—"}
-                    </span>
                   </td>
                   <td className="px-4 py-3 font-mono text-gray-500 text-xs">{v.whatsapp_number}</td>
                   <td className="px-4 py-3">
@@ -152,8 +149,8 @@ export default function VolunteersPage() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center font-bold text-gray-700">{rescueStats[v.id]?.picked ?? 0}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-center font-bold text-gray-700 hidden lg:table-cell">{rescueStats[v.id]?.picked ?? 0}</td>
+                  <td className="px-4 py-3 text-center hidden lg:table-cell">
                     <span className="font-bold text-green-600">{rescueStats[v.id]?.resolved ?? 0}</span>
                     {(rescueStats[v.id]?.picked ?? 0) > 0 && (
                       <span className="text-xs text-gray-400 ml-1">
@@ -161,8 +158,8 @@ export default function VolunteersPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-gray-500">{v.area_coverage ?? "—"}</td>
-                  <td className="px-4 py-3 hidden md:table-cell text-gray-500">{v.availability ? (AVAILABILITY_LABELS[v.availability] ?? v.availability) : "—"}</td>
+                  <td className="px-4 py-3 text-gray-500">{v.area_coverage ?? "—"}</td>
+                  <td className="px-4 py-3 text-gray-500">{v.availability ? (AVAILABILITY_LABELS[v.availability] ?? v.availability) : "—"}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => toggleActive(v)}
@@ -198,6 +195,15 @@ export default function VolunteersPage() {
                 </select>
               </div>
               <div><label className="text-xs font-bold text-gray-500">Area Coverage</label><input className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={form.area_coverage} onChange={(e) => setForm({ ...form, area_coverage: e.target.value })} /></div>
+              <div><label className="text-xs font-bold text-gray-500">Availability</label>
+                <select className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={form.availability} onChange={(e) => setForm({ ...form, availability: e.target.value })}>
+                  <option value="">— Not set —</option>
+                  <option value="weekdays">Weekdays only</option>
+                  <option value="weekends">Weekends only</option>
+                  <option value="both">Weekdays &amp; Weekends</option>
+                  <option value="flexible">Flexible / On-call</option>
+                </select>
+              </div>
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setModal(false)} className="flex-1 border rounded-lg py-2.5 text-sm font-semibold text-gray-600">Cancel</button>
