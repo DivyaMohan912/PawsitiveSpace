@@ -130,13 +130,17 @@ export default function VolunteersPage() {
             <tbody className="divide-y divide-gray-50">
               {volunteers.map((v) => (
                 <tr key={v.id} className="hover:bg-orange-50/50">
-                  <td className="px-4 py-3 font-semibold">
+                  <td className="px-4 py-3 font-semibold align-top">
                     {v.name}
                     {v.motivation && (
-                      <span className="block font-normal text-xs text-gray-400 max-w-[220px] truncate" title={v.motivation}>
+                      <span className="block font-normal text-xs text-gray-400 md:max-w-[220px] md:truncate" title={v.motivation}>
                         “{v.motivation}”
                       </span>
                     )}
+                    {/* Mobile-only: availability (column hidden below md) */}
+                    <span className="md:hidden block font-normal text-xs text-gray-500 mt-1">
+                      🗓 {v.availability ? (AVAILABILITY_LABELS[v.availability] ?? v.availability) : "—"}
+                    </span>
                   </td>
                   <td className="px-4 py-3 font-mono text-gray-500 text-xs">{v.whatsapp_number}</td>
                   <td className="px-4 py-3">
