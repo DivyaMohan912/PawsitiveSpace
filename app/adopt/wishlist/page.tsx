@@ -7,7 +7,7 @@ import { createBrowserClient } from "@/lib/supabase";
 import { toE164 } from "@/lib/phone";
 import PublicNav from "@/components/PublicNav";
 
-export default function WantedPage() {
+export default function WishlistPage() {
   const supabase = createBrowserClient();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -61,18 +61,18 @@ export default function WantedPage() {
       <PublicNav current="/adopt" />
 
       <div className="max-w-lg mx-auto px-4 pb-12">
-        <h1 className="font-heading text-3xl font-bold mb-2">Request a Specific Animal</h1>
+        <h1 className="font-heading text-3xl font-bold mb-2">Add to Your Wishlist</h1>
         <p className="text-gray-500 mb-6">
           Can&apos;t find what you&apos;re looking for? Tell us the type of animal you&apos;d like to adopt
-          (e.g. a Labrador puppy or a guinea pig). Our fosters will see your request and reach out if a match comes along.
+          (e.g. a Labrador puppy or a guinea pig). Our fosters will see your wishlist and reach out if a match comes along.
         </p>
 
         {done ? (
           <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
             <div className="text-4xl mb-3">🐾</div>
-            <h2 className="font-heading text-xl font-bold mb-2">Request received!</h2>
+            <h2 className="font-heading text-xl font-bold mb-2">Wishlist added!</h2>
             <p className="text-gray-500 mb-6">
-              Your request is now visible to our fosters. If a matching animal becomes available, they&apos;ll reach out to you directly.
+              Your wishlist is now visible to our fosters. If a matching animal becomes available, they&apos;ll reach out to you directly.
             </p>
             <Link href="/adopt" className="inline-block bg-brand-orange text-white font-bold px-5 py-2.5 rounded-lg hover:brightness-110 transition">
               Browse available animals
@@ -125,7 +125,7 @@ export default function WantedPage() {
                 <input required value={form.requester_mobile} onChange={(e) => setForm({ ...form, requester_mobile: e.target.value })} className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="+91 98765 43210" />
               </div>
               <button type="submit" disabled={saving} className="w-full bg-brand-orange text-white font-bold py-3 rounded-lg hover:brightness-110 transition disabled:opacity-50">
-                {saving ? "Submitting…" : "Submit Request"}
+                {saving ? "Submitting…" : "Submit Wishlist"}
               </button>
             </form>
           </>

@@ -107,8 +107,8 @@ function AdoptPage() {
                 My Listings
               </Link>
             )}
-            <Link href="/adopt/wanted" className="border-2 border-brand-orange text-brand-orange font-bold px-4 py-2 rounded-lg text-sm hover:bg-brand-orange/10 transition">
-              Request an Animal
+            <Link href="/adopt/wishlist" className="border-2 border-brand-orange text-brand-orange font-bold px-4 py-2 rounded-lg text-sm hover:bg-brand-orange/10 transition">
+              Add to Wishlist
             </Link>
             <Link href="/adopt/list" className="bg-brand-orange text-white font-bold px-4 py-2 rounded-lg text-sm hover:brightness-110 transition">
               + Post Adoption Request
