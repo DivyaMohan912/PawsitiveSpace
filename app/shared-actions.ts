@@ -149,6 +149,7 @@ export async function registerVolunteer(data: {
   roles: string[];
   availability: string;
   reason: string;
+  animals?: string[];
 }) {
   const supabase = createAdminClient();
 
@@ -156,6 +157,9 @@ export async function registerVolunteer(data: {
   const interests = data.roles.filter((r) => validRoles.includes(r));
   if (interests.length === 0) interests.push("rescuer");
   const role = interests[0];
+
+  // De-duplicate animal selections while preserving order.
+  const animals = Array.from(new Set((data.animals ?? []).filter(Boolean)));
 
   // Insert into volunteers table
   const { error } = await supabase.from("volunteers").insert({
@@ -166,6 +170,7 @@ export async function registerVolunteer(data: {
     interests,
     availability: data.availability || null,
     motivation: data.reason || null,
+    can_rescue_animals: animals.length > 0 ? animals : null,
     is_active: true,
   });
 

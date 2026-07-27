@@ -237,6 +237,16 @@ export default function Home() {
 /*  Volunteer Registration Component                                  */
 /* ------------------------------------------------------------------ */
 
+const ANIMAL_OPTIONS = [
+  { value: "dogs", label: "🐕 Dogs" },
+  { value: "cats", label: "🐱 Cats" },
+  { value: "birds", label: "🐦 Birds" },
+  { value: "snakes", label: "🐍 Snakes & Reptiles" },
+  { value: "cattle", label: "🐄 Cattle" },
+  { value: "monkeys", label: "🐒 Monkeys" },
+  { value: "small_mammals", label: "🐇 Small mammals" },
+];
+
 function VolunteerRegistration() {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -244,7 +254,7 @@ function VolunteerRegistration() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "", mobile: "", location: "", roles: ["rescuer"] as string[],
-    availability: "weekends", reason: "",
+    availability: "weekends", reason: "", animals: [] as string[], animalsOther: "",
   });
 
   function toggleRole(value: string) {
@@ -253,6 +263,15 @@ function VolunteerRegistration() {
       roles: f.roles.includes(value)
         ? f.roles.filter((r) => r !== value)
         : [...f.roles, value],
+    }));
+  }
+
+  function toggleAnimal(value: string) {
+    setForm((f) => ({
+      ...f,
+      animals: f.animals.includes(value)
+        ? f.animals.filter((a) => a !== value)
+        : [...f.animals, value],
     }));
   }
 
@@ -269,7 +288,23 @@ function VolunteerRegistration() {
     setError("");
     setSubmitting(true);
 
-    const res = await registerVolunteer(form);
+    const animals = [
+      ...form.animals,
+      ...form.animalsOther
+        .split(",")
+        .map((a) => a.trim().toLowerCase())
+        .filter(Boolean),
+    ];
+
+    const res = await registerVolunteer({
+      name: form.name,
+      mobile: form.mobile,
+      location: form.location,
+      roles: form.roles,
+      availability: form.availability,
+      reason: form.reason,
+      animals,
+    });
     if (res.success) {
       setSubmitted(true);
     } else {
@@ -378,6 +413,31 @@ function VolunteerRegistration() {
                 <option value="flexible">Flexible / On-call</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">
+              Animals you can help with <span className="font-normal text-gray-400">(optional — select all that apply)</span>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+              {ANIMAL_OPTIONS.map((opt) => (
+                <label key={opt.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.animals.includes(opt.value)}
+                    onChange={() => toggleAnimal(opt.value)}
+                    className="w-4 h-4 accent-brand-orange"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+            <input
+              value={form.animalsOther}
+              onChange={(e) => setForm({ ...form, animalsOther: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2.5 text-sm mt-2"
+              placeholder="Other animals (comma separated) — e.g. turtles, rabbits"
+            />
           </div>
 
           <div>
