@@ -21,7 +21,7 @@ export default function ListAdoptionPage() {
   const [form, setForm] = useState({
     species: "dog", species_other: "", breed: "", age: "", gender: "unknown",
     spayed_neutered: false, location: "", description: "",
-    foster_name: "", foster_mobile: "",
+    foster_name: "", foster_mobile: "", foster_email: "",
   });
 
   async function handlePhotos(e: React.ChangeEvent<HTMLInputElement>) {
@@ -61,6 +61,7 @@ export default function ListAdoptionPage() {
       photos: photos.length > 0 ? photos : [],
       foster_name: form.foster_name,
       foster_mobile: toE164(form.foster_mobile),
+      foster_email: form.foster_email.trim() ? form.foster_email.trim().toLowerCase() : null,
     });
     setSaving(false);
 
@@ -206,6 +207,11 @@ export default function ListAdoptionPage() {
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Foster Mobile *</label>
             <input required value={form.foster_mobile} onChange={(e) => setForm({ ...form, foster_mobile: e.target.value })} className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="+91 98765 43210" />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Foster Email <span className="font-normal text-gray-400">(optional)</span></label>
+            <input type="email" value={form.foster_email} onChange={(e) => setForm({ ...form, foster_email: e.target.value })} className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="you@example.com" />
+            <p className="text-xs text-gray-400 mt-1">Used to log in to your foster dashboard without WhatsApp. Your one-time login code (OTP) will be emailed here, so please enter it correctly.</p>
           </div>
           <button type="submit" disabled={saving} className="w-full bg-brand-orange text-white font-bold py-3 rounded-lg hover:brightness-110 transition disabled:opacity-50">
             {saving ? "Posting…" : "Post Adoption Listing"}

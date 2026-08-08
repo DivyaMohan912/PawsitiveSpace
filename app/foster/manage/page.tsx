@@ -6,7 +6,7 @@ import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import MaskedPhone from "@/components/admin/MaskedPhone";
-import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction, reopenListing as reopenListingAction, markWishFulfilled as markWishFulfilledAction } from "./actions";
+import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction, reopenListing as reopenListingAction, markWishFulfilled as markWishFulfilledAction, sendFosterEmailOtp, verifyFosterEmailOtp } from "./actions";
 import { sendOtp, verifyOtp } from "@/app/shared-actions";
 import ShareToInstagram from "@/components/ShareToInstagram";
 import { buildAdoptionCaption } from "@/lib/instagram";
@@ -63,6 +63,40 @@ export default function FosterManagePage() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState("");
   const [devCode, setDevCode] = useState("");
+  // Login delivery: WhatsApp code or emailed code (linked to the mobile number)
+  const [authMode, setAuthMode] = useState<"whatsapp" | "email">("email");
+  const [email, setEmail] = useState("");
+  const [otpChannel, setOtpChannel] = useState<"whatsapp" | "email">("email");
+
+  async function handleSendCode() {
+    if (mobile.length !== 10) { setOtpError("Enter your 10-digit mobile number"); return; }
+    setOtpLoading(true); setOtpError(""); setDevCode("");
+    const res = authMode === "email"
+      ? await sendFosterEmailOtp(`+91${mobile}`, email)
+      : await sendOtp(`+91${mobile}`);
+    if (res.success) {
+      setOtpSent(true);
+      setOtpChannel(authMode);
+      if ("devCode" in res && res.devCode) setDevCode(res.devCode);
+    } else {
+      setOtpError(("error" in res && res.error) || "Failed to send code");
+    }
+    setOtpLoading(false);
+  }
+
+  async function handleVerify() {
+    if (otp.length !== 6) { setOtpError("Enter the 6-digit code"); return; }
+    setOtpLoading(true); setOtpError("");
+    const res = otpChannel === "email"
+      ? await verifyFosterEmailOtp(`+91${mobile}`, email, otp)
+      : await verifyOtp(`+91${mobile}`, otp);
+    if (res.success) {
+      setVerified(true);
+    } else {
+      setOtpError(("error" in res && res.error) || "Verification failed");
+    }
+    setOtpLoading(false);
+  }
 
   const load = useCallback(async () => {
     if (!mobile) return;
@@ -119,7 +153,7 @@ export default function FosterManagePage() {
 
             {!otpSent ? (
               <>
-                <p className="text-sm text-gray-500 mb-4">Enter the WhatsApp number you used when creating your listing. We&apos;ll send a one-time code to verify.</p>
+                <p className="text-sm text-gray-500 mb-4">Enter the mobile number you used when creating your listing, then choose how you&apos;d like to receive your one-time code.</p>
                 {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
                 <div className="flex items-stretch mb-3">
                   <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 bg-gray-50 text-sm text-gray-600 font-medium select-none">+91</span>
@@ -132,36 +166,57 @@ export default function FosterManagePage() {
                     className="w-full border rounded-r-lg px-3 py-2.5 text-sm tracking-wide"
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode("email"); setOtpError(""); }}
+                    className={`text-sm font-bold py-2 rounded-lg border transition ${authMode === "email" ? "bg-brand-orange text-white border-brand-orange" : "bg-white text-gray-600 border-gray-200 hover:border-brand-orange"}`}
+                  >
+                    ✉️ Email code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode("whatsapp"); setOtpError(""); }}
+                    className={`text-sm font-bold py-2 rounded-lg border transition ${authMode === "whatsapp" ? "bg-brand-orange text-white border-brand-orange" : "bg-white text-gray-600 border-gray-200 hover:border-brand-orange"}`}
+                  >
+                    💬 WhatsApp
+                  </button>
+                </div>
+
+                {authMode === "email" && (
+                  <>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full border rounded-lg px-3 py-2.5 text-sm mb-1"
+                    />
+                    <p className="text-xs text-gray-500 bg-amber-50 rounded-lg p-2 mb-3">📧 Your 6-digit code will be sent to this email. Double-check it&apos;s spelled correctly.</p>
+                  </>
+                )}
+
                 <button
-                  onClick={async () => {
-                    if (mobile.length !== 10) {
-                      setOtpError("Enter your 10-digit mobile number");
-                      return;
-                    }
-                    setOtpLoading(true);
-                    setOtpError("");
-                    const res = await sendOtp(`+91${mobile}`);
-                    if (res.success) {
-                      setOtpSent(true);
-                      if ("devCode" in res && res.devCode) setDevCode(res.devCode);
-                    } else {
-                      setOtpError(("error" in res && res.error) || "Failed to send OTP");
-                    }
-                    setOtpLoading(false);
-                  }}
+                  onClick={handleSendCode}
                   disabled={otpLoading}
                   className="w-full bg-brand-orange text-white font-bold py-2.5 rounded-lg hover:brightness-110 disabled:opacity-50"
                 >
-                  {otpLoading ? "Sending OTP…" : "Send verification code"}
+                  {otpLoading ? "Sending code…" : "Send verification code"}
                 </button>
+                {authMode === "email" && (
+                  <p className="text-xs text-gray-400 mt-3">First time logging in by email? The email you enter will be linked to your number for future logins.</p>
+                )}
               </>
             ) : (
               <>
-                <p className="text-sm text-gray-500 mb-1">Code sent to <strong>+91 {mobile}</strong>.</p>
-                <p className="text-xs text-gray-400 mb-4">Check your WhatsApp messages.</p>
+                <p className="text-sm text-gray-500 mb-1">
+                  Code sent {otpChannel === "email" ? <>to <strong>{email}</strong></> : <>to <strong>+91 {mobile}</strong></>}.
+                </p>
+                <p className="text-xs text-gray-400 mb-4">{otpChannel === "email" ? "Check your email inbox (and spam folder)." : "Check your WhatsApp messages."}</p>
                 {devCode && (
                   <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-2 mb-3">
-                    Dev mode (no WhatsApp provider configured): your code is <strong className="font-mono">{devCode}</strong>
+                    Dev mode (no {otpChannel} provider configured): your code is <strong className="font-mono">{devCode}</strong>
                   </p>
                 )}
                 {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
@@ -173,31 +228,17 @@ export default function FosterManagePage() {
                   className="w-full border rounded-lg px-3 py-2.5 text-sm mb-3 text-center text-2xl tracking-[0.5em] font-mono"
                 />
                 <button
-                  onClick={async () => {
-                    if (otp.length !== 6) {
-                      setOtpError("Enter the 6-digit OTP");
-                      return;
-                    }
-                    setOtpLoading(true);
-                    setOtpError("");
-                    const res = await verifyOtp(`+91${mobile}`, otp);
-                    if (res.success) {
-                      setVerified(true);
-                    } else {
-                      setOtpError(res.error || "Verification failed");
-                    }
-                    setOtpLoading(false);
-                  }}
+                  onClick={handleVerify}
                   disabled={otpLoading}
                   className="w-full bg-brand-orange text-white font-bold py-2.5 rounded-lg hover:brightness-110 disabled:opacity-50 mb-2"
                 >
-                  {otpLoading ? "Verifying…" : "Verify OTP"}
+                  {otpLoading ? "Verifying…" : "Verify code"}
                 </button>
                 <button
                   onClick={() => { setOtpSent(false); setOtp(""); setOtpError(""); setDevCode(""); }}
                   className="w-full text-sm text-gray-500 hover:text-brand-orange"
                 >
-                  ← Change number
+                  ← Change details
                 </button>
               </>
             )}
@@ -297,7 +338,16 @@ export default function FosterManagePage() {
               return (
                 <div key={l.id} className="bg-white rounded-2xl p-5">
                   <div className="flex items-center gap-3 mb-3">
-                    <AnimalAvatar species={l.species} size={72} />
+                    {l.photos && l.photos.length > 0 ? (
+                      <img
+                        src={l.photos[0]}
+                        alt={l.species === "other" ? l.species_other || "animal" : l.species}
+                        className="rounded-xl object-cover flex-shrink-0"
+                        style={{ width: 72, height: 72 }}
+                      />
+                    ) : (
+                      <AnimalAvatar species={l.species} size={72} />
+                    )}
                     <div className="flex-1">
                       <h3 className="font-bold capitalize">
                         {l.species === "other" ? l.species_other : l.species}
