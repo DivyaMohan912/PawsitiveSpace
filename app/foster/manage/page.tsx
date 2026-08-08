@@ -77,9 +77,11 @@ export default function FosterManagePage() {
     if (res.success) {
       setOtpSent(true);
       setOtpChannel(authMode);
-      if ("devCode" in res && res.devCode) setDevCode(res.devCode);
+      const dev = (res as { devCode?: string }).devCode;
+      if (dev) setDevCode(dev);
     } else {
-      setOtpError(("error" in res && res.error) || "Failed to send code");
+      const err = (res as { error?: string }).error;
+      setOtpError(err || "Failed to send code");
     }
     setOtpLoading(false);
   }
@@ -93,7 +95,8 @@ export default function FosterManagePage() {
     if (res.success) {
       setVerified(true);
     } else {
-      setOtpError(("error" in res && res.error) || "Verification failed");
+      const err = (res as { error?: string }).error;
+      setOtpError(err || "Verification failed");
     }
     setOtpLoading(false);
   }
