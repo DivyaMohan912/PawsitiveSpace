@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
@@ -13,7 +14,16 @@ const NAV_LINKS = [
   { label: "Admin", href: "/admin/login" },
 ];
 
+function linkClass(link: { label: string; href: string }, current?: string) {
+  return link.href === current
+    ? "text-brand-orange underline underline-offset-4"
+    : link.label === "Admin"
+      ? "text-gray-400 hover:text-gray-600"
+      : "text-brand-orange hover:underline";
+}
+
 export default function PublicNav({ current }: { current?: string }) {
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="max-w-6xl mx-auto px-5">
@@ -25,24 +35,44 @@ export default function PublicNav({ current }: { current?: string }) {
           <span className="font-heading font-bold text-xl text-gray-900">PawsitiveSpace</span>
         </Link>
 
-        {/* Nav links — always visible */}
-        <div className="flex flex-wrap gap-2 sm:gap-3 lg:gap-5 text-sm font-semibold">
+        {/* Desktop nav links */}
+        <div className="hidden md:flex flex-wrap gap-2 sm:gap-3 lg:gap-5 text-sm font-semibold">
+          {NAV_LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className={linkClass(link, current)}>
+              {link.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Mobile burger button */}
+        <button
+          type="button"
+          aria-label="Toggle navigation menu"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          className="md:hidden inline-flex items-center justify-center p-2 -mr-2 rounded-lg text-gray-700 hover:bg-gray-100"
+        >
+          <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            {open ? <path d="M6 6l12 12M18 6l-12 12" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+          </svg>
+        </button>
+      </nav>
+
+      {/* Mobile stacked menu */}
+      {open && (
+        <div className="md:hidden flex flex-col gap-1 pb-4 text-sm font-semibold">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={link.href === current
-                ? "text-brand-orange underline underline-offset-4"
-                : link.label === "Admin"
-                  ? "text-gray-400 hover:text-gray-600"
-                  : "text-brand-orange hover:underline"
-              }
+              onClick={() => setOpen(false)}
+              className={`${linkClass(link, current)} py-2 px-3 rounded-lg hover:bg-gray-50`}
             >
               {link.label}
             </Link>
           ))}
         </div>
-      </nav>
+      )}
     </div>
   );
 }

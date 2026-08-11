@@ -120,8 +120,8 @@ export default function Home() {
       {/* ---- Hero ---- */}
       <section className="relative overflow-hidden rounded-3xl mx-4 sm:mx-8 lg:mx-auto max-w-6xl bg-gradient-to-br from-brand-orange via-brand-amber to-brand-yellow px-6 sm:px-12 py-12 sm:py-16">
         <div className="relative z-10 max-w-lg">
-          <span className="inline-flex items-center gap-1.5 bg-white/25 backdrop-blur text-white text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full mb-6">
-            <PawIcon className="w-4 h-4" /> Hyderabad Animal Rescue
+          <span className="inline-flex items-center gap-1.5 bg-white/25 backdrop-blur text-white text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-2xl sm:rounded-full mb-6 max-w-[7.5rem] sm:max-w-none">
+            <PawIcon className="w-4 h-4 shrink-0" /> Hyderabad Animal Rescue
           </span>
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
             Every paw<br />deserves a home

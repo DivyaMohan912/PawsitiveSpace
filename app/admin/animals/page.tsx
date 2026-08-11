@@ -40,6 +40,7 @@ export default function AnimalsPage() {
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<Partial<Animal>>(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState("");
 
   const load = useCallback(async () => {
@@ -61,6 +62,34 @@ export default function AnimalsPage() {
 
   function openAdd() { setEditing({ ...EMPTY }); setModal(true); }
   function openEdit(a: Animal) { setEditing({ ...a }); setModal(true); }
+
+  async function handlePhotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const urls: string[] = [];
+    for (const file of Array.from(files)) {
+      const ext = file.name.split(".").pop();
+      const path = `animals/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("photos").upload(path, file, { upsert: true });
+      if (!upErr) {
+        const { data } = supabase.storage.from("photos").getPublicUrl(path);
+        urls.push(data.publicUrl);
+      }
+    }
+    setEditing((prev) => ({ ...prev, photos: [...(prev.photos ?? []), ...urls] }));
+    setUploading(false);
+    e.target.value = "";
+  }
+
+  const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+  function animalTitle(a: Animal) { return a.name?.trim() || `Unnamed ${cap(a.species)}`; }
+  function animalDetails(a: Animal) {
+    const parts = [cap(a.breed?.trim() || a.species)];
+    if (a.age_estimate?.trim()) parts.push(a.age_estimate.trim());
+    if (a.gender && a.gender !== "unknown") parts.push(cap(a.gender));
+    return parts.join(" \u00b7 ");
+  }
 
   async function save() {
     setSaving(true);
@@ -121,10 +150,15 @@ export default function AnimalsPage() {
           {animals.map((a) => (
             <div key={a.id} onClick={() => openEdit(a)} className="bg-white rounded-2xl p-5 hover:shadow-lg transition cursor-pointer">
               <div className="flex justify-center py-3">
-                <AnimalAvatar species={a.species} earTipped={a.ear_tipped} size={88} />
+                {a.photos && a.photos.length > 0 ? (
+                  <img src={a.photos[0]} alt={animalTitle(a)} className="w-[88px] h-[88px] rounded-full object-cover" />
+                ) : (
+                  <AnimalAvatar species={a.species} earTipped={a.ear_tipped} size={88} />
+                )}
               </div>
-              <h3 className="font-bold">{a.name || "Unnamed"}</h3>
-              <p className="text-xs text-gray-500">{a.breed ?? a.species} · {a.age_estimate ?? "?"} · {a.gender ?? "?"}</p>
+              <h3 className="font-bold">{animalTitle(a)}</h3>
+              <p className="text-xs text-gray-500">{animalDetails(a)}</p>
+              {a.location_description && <p className="text-xs text-gray-400 mt-0.5 truncate">📍 {a.location_description}</p>}
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <StatusBadge status={a.status} />
                 {a.sterilized && <span className="text-xs text-green-600 font-semibold">✂️ Sterilized</span>}
@@ -157,8 +191,12 @@ export default function AnimalsPage() {
               {animals.map((a) => (
                 <tr key={a.id} onClick={() => openEdit(a)} className="hover:bg-orange-50/50 cursor-pointer">
                   <td className="px-4 py-3 flex items-center gap-2">
-                    <AnimalAvatar species={a.species} earTipped={a.ear_tipped} size={48} />
-                    <span className="font-semibold">{a.name || "Unnamed"}</span>
+                    {a.photos && a.photos.length > 0 ? (
+                      <img src={a.photos[0]} alt={animalTitle(a)} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <AnimalAvatar species={a.species} earTipped={a.ear_tipped} size={48} />
+                    )}
+                    <span className="font-semibold">{animalTitle(a)}</span>
                   </td>
                   <td className="px-4 py-3 capitalize">{a.species}</td>
                   <td className="px-4 py-3 hidden sm:table-cell text-gray-500">{a.breed ?? "—"}</td>
@@ -233,6 +271,22 @@ export default function AnimalsPage() {
               <div className="col-span-2">
                 <label className="text-xs font-bold text-gray-500">Temperament Notes</label>
                 <textarea className="w-full border rounded-lg px-3 py-2 text-sm mt-1" rows={2} value={editing.temperament_notes ?? ""} onChange={(e) => setEditing({ ...editing, temperament_notes: e.target.value })} />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs font-bold text-gray-500">Photos</label>
+                <input type="file" accept="image/*" multiple onChange={handlePhotos} className="w-full text-sm mt-1 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-orange/10 file:text-brand-orange file:font-semibold hover:file:bg-brand-orange/20 file:cursor-pointer" />
+                {uploading && <p className="text-xs text-brand-orange mt-1 animate-pulse">Uploading…</p>}
+                {editing.photos && editing.photos.length > 0 && (
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {editing.photos.map((url, i) => (
+                      <div key={i} className="relative">
+                        <img src={url} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                        <button type="button" onClick={() => setEditing({ ...editing, photos: editing.photos!.filter((_, j) => j !== i) })} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[10px] text-gray-400 mt-1">Add clear photos so the animal is recognizable in listings and the foster board.</p>
               </div>
             </div>
             <div className="flex gap-3 mt-6">
