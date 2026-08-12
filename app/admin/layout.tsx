@@ -11,9 +11,9 @@ const NAV_ITEMS = [
   { label: "Cases", href: "/admin/cases", icon: "🚨" },
   { label: "Reach Out", href: "/admin/reach-out", icon: "📞" },
   { label: "Message Logs", href: "/admin/reports", icon: "💬" },
-  { label: "Adoptions", href: "/admin/adoptions", icon: "🏠" },
+  { label: "Adoption Pipeline", href: "/admin/adoptions", icon: "🏠" },
   { label: "Wishlist", href: "/admin/wishes", icon: "🙋" },
-  { label: "Animals", href: "/admin/animals", icon: "🐾" },
+  { label: "Adoptions", href: "/admin/animals", icon: "🐾" },
   { label: "TNR", href: "/admin/tnr", icon: "✂️" },
 ];
 

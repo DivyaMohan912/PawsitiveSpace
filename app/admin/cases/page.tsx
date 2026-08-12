@@ -214,7 +214,11 @@ export default function CasesPage() {
                   <td className="px-4 py-3 font-mono font-bold text-brand-orange">{c.id.slice(0, 8).toUpperCase()}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <AnimalAvatar species={c.animals?.species ?? "other"} size={48} />
+                      {c.animals?.photos && c.animals.photos.length > 0 ? (
+                        <img src={c.animals.photos[0]} alt={c.animals?.name ?? c.animals?.species ?? "animal"} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <AnimalAvatar species={c.animals?.species ?? "other"} size={48} />
+                      )}
                       <span>{c.animals?.name ?? c.animals?.species ?? "—"}</span>
                     </div>
                   </td>
@@ -239,7 +243,11 @@ export default function CasesPage() {
           <div className="space-y-6">
             {/* Animal details */}
             <div className="flex items-center gap-4">
-              <AnimalAvatar species={selected.animals?.species ?? "other"} size={96} />
+              {selected.animals?.photos && selected.animals.photos.length > 0 ? (
+                <img src={selected.animals.photos[0]} alt={selected.animals?.name ?? selected.animals?.species ?? "animal"} className="w-24 h-24 rounded-xl object-cover flex-shrink-0" />
+              ) : (
+                <AnimalAvatar species={selected.animals?.species ?? "other"} size={96} />
+              )}
               <div>
                 <p className="font-bold text-lg">{selected.animals?.name ?? "Unnamed"}</p>
                 <p className="text-sm text-gray-500 capitalize">{selected.animals?.species}</p>
