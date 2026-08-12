@@ -6,6 +6,8 @@ import StatusBadge from "@/components/admin/StatusBadge";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import MaskedPhone from "@/components/admin/MaskedPhone";
 import CaseDrawer from "@/components/admin/CaseDrawer";
+import { generateRescueTile } from "@/lib/rescue-tile";
+import { downloadBlob } from "@/lib/adoption-tile";
 
 interface CaseRow {
   id: string;
@@ -37,6 +39,53 @@ export default function CasesPage() {
   const [notes, setNotes] = useState("");
   const [assignTo, setAssignTo] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Batch PNG export (shareable rescue tiles)
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
+  const [exportMsg, setExportMsg] = useState("");
+
+  function togglePick(id: string) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  const allPicked = cases.length > 0 && cases.every((c) => picked.has(c.id));
+  function togglePickAll() {
+    setPicked((prev) => {
+      if (cases.length > 0 && cases.every((c) => prev.has(c.id))) return new Set();
+      return new Set(cases.map((c) => c.id));
+    });
+  }
+  async function exportPicked() {
+    const chosen = cases.filter((c) => picked.has(c.id));
+    if (chosen.length === 0) return;
+    setExporting(true);
+    let done = 0;
+    for (const c of chosen) {
+      setExportMsg(`Generating ${done + 1} of ${chosen.length}…`);
+      const blob = await generateRescueTile({
+        id: c.id,
+        species: c.animals?.species ?? "other",
+        name: c.animals?.name ?? null,
+        location: c.animals?.location_description ?? null,
+        notes: c.animals?.health_notes || c.case_notes || null,
+        photos: c.animals?.photos ?? null,
+        status: c.status,
+      });
+      if (blob) {
+        const sp = c.animals?.species ?? "animal";
+        downloadBlob(blob, `pawsitivespace-rescue-${sp}-${c.id.slice(0, 6)}.png`);
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      done++;
+    }
+    setExporting(false);
+    setExportMsg(`Downloaded ${done} tile${done === 1 ? "" : "s"}.`);
+    setTimeout(() => setExportMsg(""), 4000);
+  }
 
   // Convert-to-adoption state
   const [convertCase, setConvertCase] = useState<CaseRow | null>(null);
@@ -193,12 +242,34 @@ export default function CasesPage() {
         />
       </div>
 
+      {/* Export toolbar */}
+      {cases.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-4 bg-white rounded-xl px-4 py-3">
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 cursor-pointer">
+            <input type="checkbox" checked={allPicked} onChange={togglePickAll} className="rounded accent-[#FF8C42]" />
+            Select all
+          </label>
+          <span className="text-sm text-gray-400">{picked.size} selected</span>
+          <button
+            onClick={exportPicked}
+            disabled={picked.size === 0 || exporting}
+            className="ml-auto bg-brand-orange text-white font-bold px-4 py-2 rounded-lg text-sm hover:brightness-110 disabled:opacity-40"
+          >
+            {exporting ? "Generating…" : `⬇ Export ${picked.size || ""} as PNG`}
+          </button>
+          {exportMsg && <span className="text-xs text-gray-500 w-full sm:w-auto">{exportMsg}</span>}
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs font-bold text-gray-500 uppercase">
               <tr>
+                <th className="px-4 py-3 w-10">
+                  <input type="checkbox" checked={allPicked} onChange={togglePickAll} className="rounded accent-[#FF8C42] align-middle" onClick={(e) => e.stopPropagation()} />
+                </th>
                 <th className="px-4 py-3">Case</th>
                 <th className="px-4 py-3">Animal</th>
                 <th className="px-4 py-3 hidden sm:table-cell">Location</th>
@@ -210,7 +281,10 @@ export default function CasesPage() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {cases.map((c) => (
-                <tr key={c.id} onClick={() => openDrawer(c)} className="hover:bg-orange-50/50 cursor-pointer transition">
+                <tr key={c.id} onClick={() => openDrawer(c)} className={`hover:bg-orange-50/50 cursor-pointer transition ${picked.has(c.id) ? "bg-orange-50/60" : ""}`}>
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={picked.has(c.id)} onChange={() => togglePick(c.id)} className="w-4 h-4 rounded accent-[#FF8C42] align-middle" aria-label="Select for export" />
+                  </td>
                   <td className="px-4 py-3 font-mono font-bold text-brand-orange">{c.id.slice(0, 8).toUpperCase()}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -230,7 +304,7 @@ export default function CasesPage() {
                 </tr>
               ))}
               {cases.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-12 text-gray-400">No cases found</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-gray-400">No cases found</td></tr>
               )}
             </tbody>
           </table>

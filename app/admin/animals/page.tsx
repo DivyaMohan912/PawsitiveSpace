@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import MaskedPhone from "@/components/admin/MaskedPhone";
+import { generateAdoptionTile, downloadBlob } from "@/lib/adoption-tile";
+import { uniqueNumbers, copyToClipboard, downloadCsv } from "@/lib/contacts";
 
 interface Listing {
   id: string;
@@ -41,6 +43,38 @@ export default function AdoptionsPage() {
   const [speciesFilter, setSpeciesFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
+  const [exportMsg, setExportMsg] = useState("");
+  const [contactMsg, setContactMsg] = useState("");
+
+  async function copyFosterNumbers() {
+    const nums = uniqueNumbers(listings.map((l) => l.foster_mobile));
+    if (nums.length === 0) { setContactMsg("No foster numbers found."); setTimeout(() => setContactMsg(""), 3000); return; }
+    const ok = await copyToClipboard(nums.join(", "));
+    setContactMsg(ok ? `Copied ${nums.length} number${nums.length === 1 ? "" : "s"} to clipboard.` : "Copy failed — use Download CSV instead.");
+    setTimeout(() => setContactMsg(""), 4000);
+  }
+
+  function downloadFosterCsv() {
+    const rows: string[][] = [["Foster", "Mobile", "Email"]];
+    const seen = new Set<string>();
+    for (const l of listings) {
+      const num = (l.foster_mobile ?? "").trim();
+      if (!num || seen.has(num)) continue;
+      seen.add(num);
+      rows.push([l.foster_name ?? "", num, l.foster_email ?? ""]);
+    }
+    downloadCsv(`pawsitivespace-fosters-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   const load = useCallback(async () => {
     let q = supabase.from("adoption_listings").select("*").order("created_at", { ascending: false });
@@ -76,6 +110,35 @@ export default function AdoptionsPage() {
     await supabase.from("adoption_listings").update({ status: "open" }).eq("id", id);
     setBusy("");
     load();
+  }
+
+  const allSelected = listings.length > 0 && listings.every((l) => selected.has(l.id));
+  function toggleSelectAll() {
+    setSelected((prev) => {
+      if (listings.length > 0 && listings.every((l) => prev.has(l.id))) return new Set();
+      return new Set(listings.map((l) => l.id));
+    });
+  }
+
+  async function exportSelected() {
+    const chosen = listings.filter((l) => selected.has(l.id));
+    if (chosen.length === 0) return;
+    setExporting(true);
+    let done = 0;
+    for (const l of chosen) {
+      setExportMsg(`Generating ${done + 1} of ${chosen.length}…`);
+      const blob = await generateAdoptionTile(l);
+      if (blob) {
+        const sp = l.species === "other" ? (l.species_other || "animal") : l.species;
+        downloadBlob(blob, `pawsitivespace-adopt-${sp}-${l.id.slice(0, 6)}.png`);
+        // Small gap so browsers don't block the batch of downloads.
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      done++;
+    }
+    setExporting(false);
+    setExportMsg(`Downloaded ${done} tile${done === 1 ? "" : "s"}.`);
+    setTimeout(() => setExportMsg(""), 4000);
   }
 
   const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -121,12 +184,54 @@ export default function AdoptionsPage() {
         />
       </div>
 
+      {/* Foster outreach: extract mobile numbers for WhatsApp */}
+      {listings.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-4 bg-white rounded-xl px-4 py-3">
+          <span className="text-sm font-semibold text-gray-600">📱 Foster contacts</span>
+          <button onClick={copyFosterNumbers} className="bg-brand-orange text-white font-bold px-3 py-1.5 rounded-lg text-sm hover:brightness-110">
+            Copy numbers
+          </button>
+          <button onClick={downloadFosterCsv} className="border border-gray-300 font-bold px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50">
+            ⬇ Download CSV
+          </button>
+          <span className="text-xs text-gray-500">Paste into WhatsApp to share adoption drives.</span>
+          {contactMsg && <span className="text-xs text-green-600 font-semibold w-full sm:w-auto">{contactMsg}</span>}
+        </div>
+      )}
+
+      {/* Export toolbar */}
+      {listings.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-4 bg-white rounded-xl px-4 py-3">
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 cursor-pointer">
+            <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="rounded accent-[#FF8C42]" />
+            Select all
+          </label>
+          <span className="text-sm text-gray-400">{selected.size} selected</span>
+          <button
+            onClick={exportSelected}
+            disabled={selected.size === 0 || exporting}
+            className="ml-auto bg-brand-orange text-white font-bold px-4 py-2 rounded-lg text-sm hover:brightness-110 disabled:opacity-40"
+          >
+            {exporting ? "Generating…" : `⬇ Export ${selected.size || ""} as PNG`}
+          </button>
+          {exportMsg && <span className="text-xs text-gray-500 w-full sm:w-auto">{exportMsg}</span>}
+        </div>
+      )}
+
       {listings.length === 0 ? (
         <div className="bg-white rounded-2xl p-10 text-center text-gray-400">No adoption listings found.</div>
       ) : (
         <div className="space-y-3">
           {listings.map((l) => (
-            <div key={l.id} className="bg-white rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div key={l.id} className={`bg-white rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 ${selected.has(l.id) ? "ring-2 ring-brand-orange" : ""}`}>
+              {/* Select for export */}
+              <input
+                type="checkbox"
+                checked={selected.has(l.id)}
+                onChange={() => toggleSelect(l.id)}
+                className="self-start sm:self-center w-5 h-5 rounded accent-[#FF8C42] flex-shrink-0"
+                aria-label="Select for export"
+              />
               {/* Photo */}
               {l.photos && l.photos.length > 0 ? (
                 <img src={l.photos[0]} alt={title(l)} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />

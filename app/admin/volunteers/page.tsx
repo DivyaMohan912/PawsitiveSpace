@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createBrowserClient } from "@/lib/supabase";
+import { uniqueNumbers, copyToClipboard, downloadCsv } from "@/lib/contacts";
 
 interface Volunteer {
   id: string;
@@ -56,6 +57,29 @@ export default function VolunteersPage() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<typeof EMPTY & { id?: string }>(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [contactMsg, setContactMsg] = useState("");
+
+  const activeVolunteers = volunteers.filter((v) => v.is_active);
+
+  async function copyNumbers() {
+    const nums = uniqueNumbers(activeVolunteers.map((v) => v.whatsapp_number));
+    if (nums.length === 0) { setContactMsg("No active numbers found."); setTimeout(() => setContactMsg(""), 3000); return; }
+    const ok = await copyToClipboard(nums.join(", "));
+    setContactMsg(ok ? `Copied ${nums.length} number${nums.length === 1 ? "" : "s"} to clipboard.` : "Copy failed — use Download CSV instead.");
+    setTimeout(() => setContactMsg(""), 4000);
+  }
+
+  function downloadNumbersCsv() {
+    const rows: string[][] = [["Name", "WhatsApp", "Role"]];
+    const seen = new Set<string>();
+    for (const v of activeVolunteers) {
+      const num = (v.whatsapp_number ?? "").trim();
+      if (!num || seen.has(num)) continue;
+      seen.add(num);
+      rows.push([v.name ?? "", num, v.role ?? ""]);
+    }
+    downloadCsv(`pawsitivespace-volunteers-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  }
 
   const load = useCallback(async () => {
     const [volRes, caseRes] = await Promise.all([
@@ -142,6 +166,19 @@ export default function VolunteersPage() {
         <button onClick={() => { setForm(EMPTY); setModal(true); }} className="bg-brand-orange text-white font-bold px-4 py-2 rounded-lg text-sm">
           + Add Volunteer
         </button>
+      </div>
+
+      {/* WhatsApp outreach: extract active volunteer numbers */}
+      <div className="flex flex-wrap items-center gap-3 mb-5 bg-white rounded-xl px-4 py-3">
+        <span className="text-sm font-semibold text-gray-600">📱 {activeVolunteers.length} active volunteer{activeVolunteers.length === 1 ? "" : "s"}</span>
+        <button onClick={copyNumbers} className="bg-brand-orange text-white font-bold px-3 py-1.5 rounded-lg text-sm hover:brightness-110">
+          Copy numbers
+        </button>
+        <button onClick={downloadNumbersCsv} className="border border-gray-300 font-bold px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50">
+          ⬇ Download CSV
+        </button>
+        <span className="text-xs text-gray-500">Paste into WhatsApp to start a group or channel.</span>
+        {contactMsg && <span className="text-xs text-green-600 font-semibold w-full sm:w-auto">{contactMsg}</span>}
       </div>
 
       <div className="bg-white rounded-2xl overflow-hidden">
