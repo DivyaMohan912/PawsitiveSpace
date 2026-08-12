@@ -132,7 +132,13 @@ export default function Home() {
               href="/report"
               className="inline-flex items-center gap-2 bg-white text-brand-orange font-bold px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-shadow"
             >
-              Report an animal <span aria-hidden>↗</span>
+              Rescue an animal <span aria-hidden>↗</span>
+            </Link>
+            <Link
+              href="/adopt/list"
+              className="inline-flex items-center gap-2 bg-white/20 text-white font-bold px-6 py-3 rounded-full border-2 border-white hover:bg-white/30 transition-colors"
+            >
+              Post Adoption request
             </Link>
             <Link
               href="/adopt"

@@ -6,8 +6,8 @@ import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import MaskedPhone from "@/components/admin/MaskedPhone";
-import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction, reopenListing as reopenListingAction, markWishFulfilled as markWishFulfilledAction, sendFosterEmailOtp, verifyFosterEmailOtp } from "./actions";
-import { sendOtp, verifyOtp } from "@/app/shared-actions";
+import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction, reopenListing as reopenListingAction, markWishFulfilled as markWishFulfilledAction, verifyFosterGoogle } from "./actions";
+import { createBrowserClient } from "@/lib/supabase";
 import ShareToInstagram from "@/components/ShareToInstagram";
 import { buildAdoptionCaption } from "@/lib/instagram";
 import { buildWaLink } from "@/lib/click-to-chat";
@@ -51,55 +51,65 @@ interface Wish {
 
 export default function FosterManagePage() {
   const router = useRouter();
+  const supabase = createBrowserClient();
   const [mobile, setMobile] = useState("");
   const [verified, setVerified] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [requests, setRequests] = useState<Request[]>([]);
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [saving, setSaving] = useState(false);
-  // OTP state
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpError, setOtpError] = useState("");
-  const [devCode, setDevCode] = useState("");
-  // Login delivery: WhatsApp code or emailed code (linked to the mobile number)
-  const [authMode, setAuthMode] = useState<"whatsapp" | "email">("email");
-  const [email, setEmail] = useState("");
-  const [otpChannel, setOtpChannel] = useState<"whatsapp" | "email">("email");
+  // Google sign-in login state
+  const [authError, setAuthError] = useState("");
+  const [checking, setChecking] = useState(false);
 
-  async function handleSendCode() {
-    if (mobile.length !== 10) { setOtpError("Enter your 10-digit mobile number"); return; }
-    setOtpLoading(true); setOtpError(""); setDevCode("");
-    const res = authMode === "email"
-      ? await sendFosterEmailOtp(`+91${mobile}`, email)
-      : await sendOtp(`+91${mobile}`);
-    if (res.success) {
-      setOtpSent(true);
-      setOtpChannel(authMode);
-      const dev = (res as { devCode?: string }).devCode;
-      if (dev) setDevCode(dev);
-    } else {
-      const err = (res as { error?: string }).error;
-      setOtpError(err || "Failed to send code");
-    }
-    setOtpLoading(false);
+  async function handleGoogleLogin() {
+    if (mobile.length !== 10) { setAuthError("Enter your 10-digit mobile number first"); return; }
+    setAuthError("");
+    if (typeof window !== "undefined") localStorage.setItem("foster_login_mobile", mobile);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/foster/manage`,
+        queryParams: { prompt: "select_account" },
+      },
+    });
+    if (error) setAuthError(error.message);
   }
 
-  async function handleVerify() {
-    if (otp.length !== 6) { setOtpError("Enter the 6-digit code"); return; }
-    setOtpLoading(true); setOtpError("");
-    const res = otpChannel === "email"
-      ? await verifyFosterEmailOtp(`+91${mobile}`, email, otp)
-      : await verifyOtp(`+91${mobile}`, otp);
-    if (res.success) {
-      setVerified(true);
-    } else {
-      const err = (res as { error?: string }).error;
-      setOtpError(err || "Verification failed");
-    }
-    setOtpLoading(false);
-  }
+  // After returning from Google, associate the signed-in email with the mobile
+  // number the foster entered, then unlock the dashboard.
+  useEffect(() => {
+    (async () => {
+      const savedMobile = typeof window !== "undefined" ? localStorage.getItem("foster_login_mobile") : null;
+      if (!savedMobile) return;
+
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session && typeof window !== "undefined" && window.location.hash) {
+        const hp = new URLSearchParams(window.location.hash.substring(1));
+        const at = hp.get("access_token");
+        const rt = hp.get("refresh_token");
+        if (at && rt) {
+          const { data } = await supabase.auth.setSession({ access_token: at, refresh_token: rt });
+          session = data.session;
+        }
+      }
+
+      const email = session?.user?.email;
+      if (!email) return;
+
+      setChecking(true);
+      const res = await verifyFosterGoogle(`+91${savedMobile}`, email);
+      localStorage.removeItem("foster_login_mobile");
+      if (res.success) {
+        setMobile(savedMobile);
+        setVerified(true);
+      } else {
+        setAuthError(res.error || "Could not verify your account.");
+      }
+      setChecking(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const load = useCallback(async () => {
     if (!mobile) return;
@@ -154,11 +164,15 @@ export default function FosterManagePage() {
           <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full">
             <h1 className="font-heading text-xl font-bold mb-4">Foster Dashboard</h1>
 
-            {!otpSent ? (
+            {checking ? (
+              <p className="text-sm text-gray-500 py-6 text-center animate-pulse">Signing you in…</p>
+            ) : (
               <>
-                <p className="text-sm text-gray-500 mb-4">Enter the mobile number you used when creating your listing, then choose how you&apos;d like to receive your one-time code.</p>
-                {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
-                <div className="flex items-stretch mb-3">
+                <p className="text-sm text-gray-500 mb-4">Enter the mobile number you used when creating your listing, then sign in with Google. Your Google account gets linked to that number so you can log in without WhatsApp next time.</p>
+                {authError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{authError}</p>}
+
+                <label className="block text-sm font-bold text-gray-700 mb-1">Mobile number *</label>
+                <div className="flex items-stretch mb-4">
                   <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 bg-gray-50 text-sm text-gray-600 font-medium select-none">+91</span>
                   <input
                     type="tel"
@@ -170,79 +184,20 @@ export default function FosterManagePage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => { setAuthMode("email"); setOtpError(""); }}
-                    className={`text-sm font-bold py-2 rounded-lg border transition ${authMode === "email" ? "bg-brand-orange text-white border-brand-orange" : "bg-white text-gray-600 border-gray-200 hover:border-brand-orange"}`}
-                  >
-                    ✉️ Email code
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setAuthMode("whatsapp"); setOtpError(""); }}
-                    className={`text-sm font-bold py-2 rounded-lg border transition ${authMode === "whatsapp" ? "bg-brand-orange text-white border-brand-orange" : "bg-white text-gray-600 border-gray-200 hover:border-brand-orange"}`}
-                  >
-                    💬 WhatsApp
-                  </button>
-                </div>
+                <button
+                  onClick={handleGoogleLogin}
+                  className="w-full flex items-center justify-center gap-3 border border-gray-300 bg-white text-gray-700 font-bold py-2.5 rounded-lg hover:bg-gray-50 transition"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden>
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z" />
+                  </svg>
+                  Continue with Google
+                </button>
 
-                {authMode === "email" && (
-                  <>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      className="w-full border rounded-lg px-3 py-2.5 text-sm mb-1"
-                    />
-                    <p className="text-xs text-gray-500 bg-amber-50 rounded-lg p-2 mb-3">📧 Your 6-digit code will be sent to this email. Double-check it&apos;s spelled correctly.</p>
-                  </>
-                )}
-
-                <button
-                  onClick={handleSendCode}
-                  disabled={otpLoading}
-                  className="w-full bg-brand-orange text-white font-bold py-2.5 rounded-lg hover:brightness-110 disabled:opacity-50"
-                >
-                  {otpLoading ? "Sending code…" : "Send verification code"}
-                </button>
-                {authMode === "email" && (
-                  <p className="text-xs text-gray-400 mt-3">First time logging in by email? The email you enter will be linked to your number for future logins.</p>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-gray-500 mb-1">
-                  Code sent {otpChannel === "email" ? <>to <strong>{email}</strong></> : <>to <strong>+91 {mobile}</strong></>}.
-                </p>
-                <p className="text-xs text-gray-400 mb-4">{otpChannel === "email" ? "Check your email inbox (and spam folder)." : "Check your WhatsApp messages."}</p>
-                {devCode && (
-                  <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-2 mb-3">
-                    Dev mode (no {otpChannel} provider configured): your code is <strong className="font-mono">{devCode}</strong>
-                  </p>
-                )}
-                {otpError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{otpError}</p>}
-                <input
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="Enter 6-digit OTP"
-                  maxLength={6}
-                  className="w-full border rounded-lg px-3 py-2.5 text-sm mb-3 text-center text-2xl tracking-[0.5em] font-mono"
-                />
-                <button
-                  onClick={handleVerify}
-                  disabled={otpLoading}
-                  className="w-full bg-brand-orange text-white font-bold py-2.5 rounded-lg hover:brightness-110 disabled:opacity-50 mb-2"
-                >
-                  {otpLoading ? "Verifying…" : "Verify code"}
-                </button>
-                <button
-                  onClick={() => { setOtpSent(false); setOtp(""); setOtpError(""); setDevCode(""); }}
-                  className="w-full text-sm text-gray-500 hover:text-brand-orange"
-                >
-                  ← Change details
-                </button>
+                <p className="text-xs text-gray-400 mt-3">First time? Your Google email will be linked to this number for future logins.</p>
               </>
             )}
           </div>

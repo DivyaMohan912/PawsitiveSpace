@@ -13,7 +13,7 @@ interface CaseRow {
   case_notes: string | null;
   assigned_to: string | null;
   created_at: string;
-  animals: { id: string; name: string | null; species: string; location_description: string | null; health_notes: string | null; photos: string[] } | null;
+  animals: { id: string; name: string | null; species: string; breed: string | null; age_estimate: string | null; gender: string | null; sterilized: boolean | null; location_description: string | null; health_notes: string | null; temperament_notes: string | null; photos: string[] } | null;
   reporters: { whatsapp_number: string } | null;
   volunteers: { id: string; name: string } | null;
 }
@@ -38,10 +38,19 @@ export default function CasesPage() {
   const [assignTo, setAssignTo] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Convert-to-adoption state
+  const [convertCase, setConvertCase] = useState<CaseRow | null>(null);
+  const [converting, setConverting] = useState(false);
+  const [convertError, setConvertError] = useState("");
+  const [convertForm, setConvertForm] = useState({
+    species: "dog", species_other: "", breed: "", age: "", gender: "unknown",
+    spayed_neutered: false, location: "", description: "", foster_name: "", foster_mobile: "",
+  });
+
   const load = useCallback(async () => {
     let q = supabase
       .from("rescue_cases")
-      .select("id, status, case_notes, assigned_to, created_at, animals(id, name, species, location_description, health_notes, photos), reporters(whatsapp_number), volunteers(id, name)")
+      .select("id, status, case_notes, assigned_to, created_at, animals(id, name, species, breed, age_estimate, gender, sterilized, location_description, health_notes, temperament_notes, photos), reporters(whatsapp_number), volunteers(id, name)")
       .order("created_at", { ascending: false });
 
     if (statusFilter !== "all") q = q.eq("status", statusFilter);
@@ -91,6 +100,74 @@ export default function CasesPage() {
     setSaving(true);
     await supabase.from("rescue_cases").update({ status: newStatus }).eq("id", selected.id);
     setSaving(false);
+    setSelected(null);
+    load();
+  }
+
+  // Best-effort read of gender / neuter status from free-text notes when the
+  // structured animal fields are empty. Checks "female" before "male" because
+  // "female" contains the substring "male".
+  function parseNotes(text: string) {
+    const t = (text || "").toLowerCase();
+    let gender = "";
+    if (/female|\bshe\b|\bbitch\b/.test(t)) gender = "female";
+    else if (/\bmale\b/.test(t)) gender = "male";
+    let neutered: boolean | null = null;
+    if (/neuter|spay|steril/.test(t)) {
+      neutered = /(not|un|non)[-\s]?(neuter|spay|steril)/.test(t) ? false : true;
+    }
+    return { gender, neutered };
+  }
+
+  function openConvert(c: CaseRow) {
+    const a = c.animals;
+    const parsed = parseNotes([a?.health_notes, a?.temperament_notes, c.case_notes].filter(Boolean).join(" "));
+    const species = a?.species === "cat" || a?.species === "dog" ? a.species : "other";
+    setConvertForm({
+      species,
+      species_other: "",
+      breed: a?.breed ?? "",
+      age: a?.age_estimate ?? "",
+      gender: (a?.gender && a.gender !== "unknown" ? a.gender : parsed.gender) || "unknown",
+      spayed_neutered: !!a?.sterilized || parsed.neutered === true,
+      location: a?.location_description ?? "",
+      description: [a?.health_notes, a?.temperament_notes].filter(Boolean).join("\n"),
+      foster_name: c.volunteers?.name ?? "",
+      foster_mobile: c.reporters?.whatsapp_number ?? "",
+    });
+    setConvertError("");
+    setConvertCase(c);
+  }
+
+  async function submitConvert() {
+    if (!convertCase) return;
+    setConvertError("");
+    if (!convertForm.foster_name.trim() || !convertForm.foster_mobile.trim()) {
+      setConvertError("Foster/caretaker name and mobile are required."); return;
+    }
+    if (convertForm.species === "other" && !convertForm.species_other.trim()) {
+      setConvertError("Please specify the species."); return;
+    }
+    setConverting(true);
+    const photos = convertCase.animals?.photos ?? [];
+    const { error } = await supabase.from("adoption_listings").insert({
+      species: convertForm.species,
+      species_other: convertForm.species === "other" ? convertForm.species_other.trim() : null,
+      breed: convertForm.breed.trim() || null,
+      age: convertForm.age.trim() || null,
+      gender: convertForm.gender,
+      spayed_neutered: convertForm.spayed_neutered,
+      location: convertForm.location.trim() || null,
+      description: convertForm.description.trim() || null,
+      photos: photos.length > 0 ? photos : [],
+      foster_name: convertForm.foster_name.trim(),
+      foster_mobile: convertForm.foster_mobile.trim(),
+      status: "open",
+    });
+    if (error) { setConverting(false); setConvertError(error.message); return; }
+    await supabase.from("rescue_cases").update({ status: "resolved" }).eq("id", convertCase.id);
+    setConverting(false);
+    setConvertCase(null);
     setSelected(null);
     load();
   }
@@ -226,6 +303,11 @@ export default function CasesPage() {
               {saving ? "Saving…" : "Save Changes"}
             </button>
 
+            {/* Convert this rescue into an adoption listing */}
+            <button onClick={() => openConvert(selected)} className="w-full flex items-center justify-center gap-2 bg-brand-orange/10 text-brand-orange font-bold py-2.5 rounded-lg text-sm hover:bg-brand-orange/20 transition">
+              🏠 Convert to Adoption Listing
+            </button>
+
             {/* Status actions */}
             <div className="flex gap-2">
               {selected.status === "open" && (
@@ -247,6 +329,103 @@ export default function CasesPage() {
           </div>
         )}
       </CaseDrawer>
+
+      {/* Convert to Adoption modal */}
+      {convertCase && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setConvertCase(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+              <h2 className="font-heading text-lg font-bold">Convert to Adoption</h2>
+              <button onClick={() => setConvertCase(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-gray-500 bg-amber-50 rounded-lg p-3">
+                We pre-filled what we could from the rescue record. Review and edit anything before creating the listing — especially the foster/caretaker name and mobile, which are required.
+              </p>
+
+              {convertError && <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2">{convertError}</p>}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Animal *</label>
+                  <select value={convertForm.species} onChange={(e) => setConvertForm({ ...convertForm, species: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="dog">🐕 Dog</option>
+                    <option value="cat">🐱 Cat</option>
+                    <option value="other">🐾 Other</option>
+                  </select>
+                </div>
+                {convertForm.species === "other" && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1">Specify *</label>
+                    <input value={convertForm.species_other} onChange={(e) => setConvertForm({ ...convertForm, species_other: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Rabbit" />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Breed</label>
+                  <input value={convertForm.breed} onChange={(e) => setConvertForm({ ...convertForm, breed: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Indie" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Age</label>
+                  <input value={convertForm.age} onChange={(e) => setConvertForm({ ...convertForm, age: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 2 years" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Gender</label>
+                  <select value={convertForm.gender} onChange={(e) => setConvertForm({ ...convertForm, gender: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="unknown">Unknown</option>
+                  </select>
+                </div>
+                <div className="flex items-end pb-1">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={convertForm.spayed_neutered} onChange={(e) => setConvertForm({ ...convertForm, spayed_neutered: e.target.checked })} className="rounded accent-[#FF8C42]" />
+                    Spayed/Neutered
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Location</label>
+                <input value={convertForm.location} onChange={(e) => setConvertForm({ ...convertForm, location: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Banjara Hills, Hyderabad" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Description</label>
+                <textarea value={convertForm.description} onChange={(e) => setConvertForm({ ...convertForm, description: e.target.value })} rows={3} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Personality, health, story…" />
+              </div>
+
+              {convertCase.animals?.photos && convertCase.animals.photos.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Photos (carried over from the rescue)</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {convertCase.animals.photos.map((url, i) => (
+                      <img key={i} src={url} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <hr />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Foster / caretaker name *</label>
+                  <input value={convertForm.foster_name} onChange={(e) => setConvertForm({ ...convertForm, foster_name: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Foster mobile *</label>
+                  <input value={convertForm.foster_mobile} onChange={(e) => setConvertForm({ ...convertForm, foster_mobile: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="+91 98765 43210" />
+                </div>
+              </div>
+
+              <button onClick={submitConvert} disabled={converting} className="w-full bg-brand-orange text-white font-bold py-2.5 rounded-lg hover:brightness-110 transition disabled:opacity-50">
+                {converting ? "Creating listing…" : "Create Adoption Listing & Resolve Case"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

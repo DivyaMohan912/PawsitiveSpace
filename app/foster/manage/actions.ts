@@ -57,6 +57,34 @@ export async function verifyFosterEmailOtp(mobile: string, email: string, code: 
   return { success: true };
 }
 
+/**
+ * Verify a foster's login via Google sign-in, bound to their mobile number.
+ * The verified Google email is treated exactly like the emailed-OTP email:
+ * on first sign-in it's linked to the foster's listings (TOFU); afterwards the
+ * Google email must match the one already on file for that number.
+ */
+export async function verifyFosterGoogle(mobile: string, email: string) {
+  const entered = (email ?? "").trim().toLowerCase();
+  if (!isEmail(entered)) return { success: false, error: "Your Google account has no valid email address." };
+
+  const mine = await listingsForMobile(mobile);
+  if (mine.length === 0) {
+    return { success: false, error: "No listings found for this mobile number. Enter the same number you used when creating your listing." };
+  }
+
+  const stored = mine.map((l: any) => l.foster_email).find(Boolean) as string | undefined;
+  if (stored && stored.trim().toLowerCase() !== entered) {
+    return { success: false, error: "This Google account isn't linked to that number. Sign in with your registered email." };
+  }
+
+  const idsToBind = mine.filter((l: any) => !l.foster_email).map((l: any) => l.id);
+  if (idsToBind.length > 0) {
+    const supabase = createAdminClient();
+    await supabase.from("adoption_listings").update({ foster_email: entered }).in("id", idsToBind);
+  }
+  return { success: true };
+}
+
 export async function loadFosterData(mobile: string) {
   const supabase = createAdminClient();
 

@@ -47,6 +47,7 @@ export default function ListAdoptionPage() {
     setError("");
     if (!form.foster_name || !form.foster_mobile) { setError("Foster name and mobile are required"); return; }
     if (form.species === "other" && !form.species_other) { setError("Please specify the species"); return; }
+    if (photos.length === 0) { setError("Please add at least one photo of the animal — adoption posts without a photo can't be shared."); return; }
 
     setSaving(true);
     const { error: insertErr } = await supabase.from("adoption_listings").insert({
@@ -180,7 +181,7 @@ export default function ListAdoptionPage() {
             <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="e.g. Banjara Hills, Hyderabad" />
           </div>
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Photos</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Photos *</label>
             <input type="file" accept="image/*" multiple onChange={handlePhotos} className="w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-orange/10 file:text-brand-orange file:font-semibold hover:file:bg-brand-orange/20 file:cursor-pointer" />
             {uploading && <p className="text-xs text-brand-orange mt-1 animate-pulse">Uploading…</p>}
             {photos.length > 0 && (
@@ -193,7 +194,7 @@ export default function ListAdoptionPage() {
                 ))}
               </div>
             )}
-            <p className="text-[10px] text-gray-400 mt-1">Upload clear photos of the animal. Max 5 photos.</p>
+            <p className="text-[10px] text-gray-400 mt-1">At least one clear photo is required. Max 5 photos.</p>
           </div>
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
@@ -213,8 +214,8 @@ export default function ListAdoptionPage() {
             <input type="email" value={form.foster_email} onChange={(e) => setForm({ ...form, foster_email: e.target.value })} className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="you@example.com" />
             <p className="text-xs text-gray-400 mt-1">Used to log in to your foster dashboard without WhatsApp. Your one-time login code (OTP) will be emailed here, so please enter it correctly.</p>
           </div>
-          <button type="submit" disabled={saving} className="w-full bg-brand-orange text-white font-bold py-3 rounded-lg hover:brightness-110 transition disabled:opacity-50">
-            {saving ? "Posting…" : "Post Adoption Listing"}
+          <button type="submit" disabled={saving || uploading} className="w-full bg-brand-orange text-white font-bold py-3 rounded-lg hover:brightness-110 transition disabled:opacity-50">
+            {saving ? "Posting…" : uploading ? "Uploading photo…" : "Post Adoption Listing"}
           </button>
         </form>
           </>
