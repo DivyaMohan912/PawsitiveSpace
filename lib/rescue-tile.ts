@@ -103,9 +103,12 @@ export async function generateRescueTile(rescue: TileRescue): Promise<Blob | nul
   ctx.save();
   roundRect(ctx, photoX, photoY, photoW, photoH, 28);
   ctx.clip();
+  // Soft letterbox background so portrait/landscape photos show in full (no crop).
+  ctx.fillStyle = "#F3F4F6";
+  ctx.fillRect(photoX, photoY, photoW, photoH);
   const img = rescue.photos && rescue.photos[0] ? await loadImage(rescue.photos[0]) : null;
   if (img && img.width && img.height) {
-    const scale = Math.max(photoW / img.width, photoH / img.height);
+    const scale = Math.min(photoW / img.width, photoH / img.height);
     const dw = img.width * scale;
     const dh = img.height * scale;
     ctx.drawImage(img, photoX + (photoW - dw) / 2, photoY + (photoH - dh) / 2, dw, dh);
