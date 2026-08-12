@@ -47,6 +47,8 @@ export default function AdoptionsPage() {
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState("");
   const [contactMsg, setContactMsg] = useState("");
+  const [reelBusy, setReelBusy] = useState(false);
+  const [reelMsg, setReelMsg] = useState("");
 
   async function copyFosterNumbers() {
     const nums = uniqueNumbers(listings.map((l) => l.foster_mobile));
@@ -141,6 +143,37 @@ export default function AdoptionsPage() {
     setTimeout(() => setExportMsg(""), 4000);
   }
 
+  // Export tiles for animals listed in the last 7 days, in order, to assemble a weekly reel.
+  async function generateWeeklyReel() {
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const recent = listings.filter(
+      (l) =>
+        l.status === "open" &&
+        (l.photos?.length ?? 0) > 0 &&
+        new Date(l.created_at).getTime() >= weekAgo
+    );
+    if (recent.length === 0) {
+      setReelMsg("No new adoptable animals in the last 7 days.");
+      setTimeout(() => setReelMsg(""), 4000);
+      return;
+    }
+    setReelBusy(true);
+    let n = 0;
+    for (const l of recent) {
+      setReelMsg(`Generating ${n + 1} of ${recent.length}…`);
+      const blob = await generateAdoptionTile(l);
+      if (blob) {
+        const sp = l.species === "other" ? (l.species_other || "animal") : l.species;
+        downloadBlob(blob, `reel-${String(++n).padStart(2, "0")}-${sp}-${l.id.slice(0, 6)}.png`);
+        // Small gap so browsers don't block the batch of downloads.
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    }
+    setReelBusy(false);
+    setReelMsg(`Exported ${n} tile${n === 1 ? "" : "s"}. Drop them into CapCut/Canva as a slideshow to make the reel.`);
+    setTimeout(() => setReelMsg(""), 8000);
+  }
+
   const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
   function title(l: Listing) {
     const sp = l.species === "other" ? (l.species_other || "Animal") : l.species;
@@ -208,13 +241,21 @@ export default function AdoptionsPage() {
           </label>
           <span className="text-sm text-gray-400">{selected.size} selected</span>
           <button
+            onClick={generateWeeklyReel}
+            disabled={reelBusy || exporting}
+            className="ml-auto border border-brand-orange text-brand-orange font-bold px-4 py-2 rounded-lg text-sm hover:bg-brand-orange/10 disabled:opacity-40"
+          >
+            {reelBusy ? "Generating…" : "🎬 Weekly reel batch (7 days)"}
+          </button>
+          <button
             onClick={exportSelected}
             disabled={selected.size === 0 || exporting}
-            className="ml-auto bg-brand-orange text-white font-bold px-4 py-2 rounded-lg text-sm hover:brightness-110 disabled:opacity-40"
+            className="bg-brand-orange text-white font-bold px-4 py-2 rounded-lg text-sm hover:brightness-110 disabled:opacity-40"
           >
             {exporting ? "Generating…" : `⬇ Export ${selected.size || ""} as PNG`}
           </button>
           {exportMsg && <span className="text-xs text-gray-500 w-full sm:w-auto">{exportMsg}</span>}
+          {reelMsg && <span className="text-xs text-green-700 font-semibold w-full sm:w-auto">{reelMsg}</span>}
         </div>
       )}
 

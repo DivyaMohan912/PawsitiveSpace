@@ -25,10 +25,14 @@ export default function ListAdoptionPage() {
   });
 
   async function handlePhotos(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
+    const input = e.target;
+    const files = input.files;
     if (!files || files.length === 0) return;
     setUploading(true);
+    setError("");
     const urls: string[] = [];
+    let failed = 0;
+    let lastErr = "";
     for (const file of Array.from(files)) {
       const ext = file.name.split(".").pop();
       const path = `adoptions/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -36,10 +40,17 @@ export default function ListAdoptionPage() {
       if (!upErr) {
         const { data } = supabase.storage.from("photos").getPublicUrl(path);
         urls.push(data.publicUrl);
+      } else {
+        failed++;
+        lastErr = upErr.message;
       }
     }
-    setPhotos((prev) => [...prev, ...urls]);
+    if (urls.length > 0) setPhotos((prev) => [...prev, ...urls]);
+    if (failed > 0) {
+      setError(`${failed} photo${failed === 1 ? "" : "s"} failed to upload${lastErr ? ` (${lastErr})` : ""}. Please try again.`);
+    }
     setUploading(false);
+    input.value = ""; // allow re-selecting the same file after a failure
   }
 
   async function handleSubmit(e: React.FormEvent) {
