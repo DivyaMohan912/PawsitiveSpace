@@ -82,6 +82,7 @@ export default function AdoptionsPage() {
   const [selected, setSelected] = useState<Adoption | null>(null);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [foster, setFoster] = useState<{ name: string; mobile: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -121,6 +122,20 @@ export default function AdoptionsPage() {
   function openDrawer(a: Adoption) {
     setSelected(a);
     setNotes(a.notes ?? "");
+    setFoster(null);
+    // Foster contact lives on the source listing, reachable via the
+    // commitment -> request -> listing chain. Fetch it lazily for the drawer.
+    supabase
+      .from("adoption_commitments")
+      .select("adoption_requests(adoption_listings(foster_name, foster_mobile))")
+      .eq("adoption_id", a.id)
+      .then(({ data }) => {
+        const listing = (data as any)?.[0]?.adoption_requests?.[0]?.adoption_listings
+          ?? (data as any)?.[0]?.adoption_requests?.adoption_listings;
+        if (listing?.foster_name || listing?.foster_mobile) {
+          setFoster({ name: listing.foster_name ?? "", mobile: listing.foster_mobile ?? "" });
+        }
+      });
   }
 
   async function updateAdoption(status: string) {
@@ -176,10 +191,10 @@ export default function AdoptionsPage() {
                 <img
                   src={selected.animals.photos[0]}
                   alt={selected.animals?.name ?? "Animal"}
-                  className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                  className="w-28 h-28 rounded-xl object-cover flex-shrink-0"
                 />
               ) : (
-                <AnimalAvatar species={selected.animals?.species ?? "other"} size={48} />
+                <AnimalAvatar species={selected.animals?.species ?? "other"} size={80} />
               )}
               <div>
                 <p className="font-bold">{selected.animals?.name ?? "Unknown"}</p>
@@ -194,6 +209,13 @@ export default function AdoptionsPage() {
               <MaskedPhone number={selected.adopter_whatsapp} />
               {selected.adopter_email && <p className="text-sm text-gray-500">{selected.adopter_email}</p>}
             </div>
+            {foster && (
+              <div>
+                <h4 className="text-xs font-bold text-gray-400 uppercase mb-1">Foster</h4>
+                <p className="text-sm font-semibold">{foster.name || "—"}</p>
+                {foster.mobile && <MaskedPhone number={foster.mobile} />}
+              </div>
+            )}
             <div>
               <h4 className="text-xs font-bold text-gray-400 uppercase mb-1">Notes</h4>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full border rounded-lg px-3 py-2 text-sm" />
