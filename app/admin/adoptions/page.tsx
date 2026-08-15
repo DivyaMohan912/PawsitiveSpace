@@ -24,7 +24,7 @@ interface Adoption {
   adopter_email: string | null;
   notes: string | null;
   created_at: string;
-  animals: { id: string; name: string | null; species: string; status: string } | null;
+  animals: { id: string; name: string | null; species: string; status: string; photos: string[] | null; breed: string | null } | null;
 }
 
 const COLUMNS = ["enquiry", "application", "approved", "completed", "rejected"] as const;
@@ -58,7 +58,15 @@ function AdoptionCard({ adoption, onClick }: { adoption: Adoption; onClick: () =
       className="bg-white rounded-xl p-3 shadow-sm hover:shadow-md transition cursor-grab active:cursor-grabbing"
     >
       <div className="flex items-center gap-2 mb-2">
-        <AnimalAvatar species={adoption.animals?.species ?? "other"} size={28} />
+        {adoption.animals?.photos && adoption.animals.photos.length > 0 ? (
+          <img
+            src={adoption.animals.photos[0]}
+            alt={adoption.animals?.name ?? "Animal"}
+            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+          />
+        ) : (
+          <AnimalAvatar species={adoption.animals?.species ?? "other"} size={28} />
+        )}
         <span className="font-semibold text-sm truncate">{adoption.animals?.name ?? "Unknown"}</span>
       </div>
       <p className="text-xs text-gray-600 truncate">{adoption.adopter_name}</p>
@@ -80,7 +88,7 @@ export default function AdoptionsPage() {
   const load = useCallback(async () => {
     const { data } = await supabase
       .from("adoptions")
-      .select("*, animals(id, name, species, status)")
+      .select("*, animals(id, name, species, status, photos, breed)")
       .order("created_at", { ascending: false });
     setAdoptions((data ?? []) as unknown as Adoption[]);
   }, []);
@@ -164,10 +172,20 @@ export default function AdoptionsPage() {
         {selected && (
           <div className="space-y-5">
             <div className="flex items-center gap-3">
-              <AnimalAvatar species={selected.animals?.species ?? "other"} size={48} />
+              {selected.animals?.photos && selected.animals.photos.length > 0 ? (
+                <img
+                  src={selected.animals.photos[0]}
+                  alt={selected.animals?.name ?? "Animal"}
+                  className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                />
+              ) : (
+                <AnimalAvatar species={selected.animals?.species ?? "other"} size={48} />
+              )}
               <div>
                 <p className="font-bold">{selected.animals?.name ?? "Unknown"}</p>
-                <p className="text-sm text-gray-500 capitalize">{selected.animals?.species}</p>
+                <p className="text-sm text-gray-500 capitalize">
+                  {selected.animals?.species}{selected.animals?.breed ? ` · ${selected.animals.breed}` : ""}
+                </p>
               </div>
             </div>
             <div>

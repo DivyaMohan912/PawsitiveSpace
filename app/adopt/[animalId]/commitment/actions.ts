@@ -37,21 +37,25 @@ export async function submitAdoptionCommitment(data: CommitmentFormData) {
 
     const { data: listing } = await supabase
       .from("adoption_listings")
-      .select("id, species, species_other, breed")
+      .select("id, name, species, species_other, breed, photos")
       .eq("id", data.animalId)
       .single();
 
     if (listing) {
-      // animalId is a listing ID — create an animal record so the FK is satisfied
-      animalName = listing.species === "other"
+      // animalId is a listing ID — create an animal record so the FK is satisfied.
+      // Prefer the pet's given name; fall back to a species/breed label.
+      const speciesLabel = listing.species === "other"
         ? listing.species_other || "Animal"
         : `${listing.breed ? listing.breed + " " : ""}${listing.species}`;
+      animalName = listing.name?.trim() || speciesLabel;
 
       const { data: newAnimal, error: animalInsErr } = await supabase
         .from("animals")
         .insert({
           species: listing.species === "other" ? (listing.species_other || "other") : listing.species,
           name: animalName,
+          breed: listing.breed || null,
+          photos: listing.photos ?? [],
           status: "adopted",
         })
         .select("id")
