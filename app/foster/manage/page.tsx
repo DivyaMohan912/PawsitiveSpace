@@ -14,6 +14,7 @@ import { buildWaLink } from "@/lib/click-to-chat";
 
 interface Listing {
   id: string;
+  name: string | null;
   species: string;
   species_other: string | null;
   breed: string | null;
@@ -308,9 +309,14 @@ export default function FosterManagePage() {
                     )}
                     <div className="flex-1">
                       <h3 className="font-bold capitalize">
-                        {l.species === "other" ? l.species_other : l.species}
-                        {l.breed && <span className="text-gray-500 font-normal"> · {l.breed}</span>}
+                        {l.name?.trim() || (l.species === "other" ? l.species_other : l.species)}
+                        {!l.name?.trim() && l.breed && <span className="text-gray-500 font-normal"> · {l.breed}</span>}
                       </h3>
+                      {l.name?.trim() && (
+                        <p className="text-xs text-gray-400 capitalize">
+                          {l.species === "other" ? l.species_other : l.species}{l.breed ? ` · ${l.breed}` : ""}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-400">{l.age} · {l.gender}</p>
                     </div>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${l.status === "open" ? "bg-green-100 text-green-700" : l.status === "adopted" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>

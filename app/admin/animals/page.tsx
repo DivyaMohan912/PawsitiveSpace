@@ -10,6 +10,7 @@ import { uniqueNumbers, copyToClipboard, downloadCsv } from "@/lib/contacts";
 
 interface Listing {
   id: string;
+  name: string | null;
   species: string;
   species_other: string | null;
   breed: string | null;
@@ -176,13 +177,18 @@ export default function AdoptionsPage() {
 
   const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
   function title(l: Listing) {
+    if (l.name?.trim()) return l.name.trim();
     const sp = l.species === "other" ? (l.species_other || "Animal") : l.species;
     return cap(l.breed?.trim() || sp);
   }
   function details(l: Listing) {
     const parts: string[] = [];
     const sp = l.species === "other" ? (l.species_other || "Animal") : l.species;
-    if (l.breed?.trim()) parts.push(cap(sp));
+    if (l.name?.trim()) {
+      parts.push(l.breed?.trim() ? `${cap(sp)} \u00b7 ${l.breed.trim()}` : cap(sp));
+    } else if (l.breed?.trim()) {
+      parts.push(cap(sp));
+    }
     if (l.age?.trim()) parts.push(l.age.trim());
     if (l.gender && l.gender !== "unknown") parts.push(cap(l.gender));
     if (l.spayed_neutered) parts.push("Spayed/Neutered");

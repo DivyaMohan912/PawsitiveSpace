@@ -13,7 +13,7 @@ export default function EditListingPage() {
   const listingId = params.listingId as string;
 
   const [form, setForm] = useState({
-    species: "dog", species_other: "", breed: "", age: "", gender: "unknown",
+    name: "", species: "dog", species_other: "", breed: "", age: "", gender: "unknown",
     spayed_neutered: false, location: "", description: "",
     foster_name: "", foster_mobile: "",
   });
@@ -27,6 +27,7 @@ export default function EditListingPage() {
     supabase.from("adoption_listings").select("*").eq("id", listingId).single().then(({ data }) => {
       if (data) {
         setForm({
+          name: data.name ?? "",
           species: data.species, species_other: data.species_other ?? "",
           breed: data.breed ?? "", age: data.age ?? "", gender: data.gender ?? "unknown",
           spayed_neutered: data.spayed_neutered ?? false, location: data.location ?? "",
@@ -63,6 +64,7 @@ export default function EditListingPage() {
     setSaving(true);
 
     const { error: updateErr } = await supabase.from("adoption_listings").update({
+      name: form.name.trim() || null,
       species: form.species,
       species_other: form.species === "other" ? form.species_other : null,
       breed: form.breed || null,
@@ -96,6 +98,11 @@ export default function EditListingPage() {
         {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 mb-4">{error}</div>}
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Pet Name</label>
+            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="e.g. Bruno, Whiskers" />
+            <p className="text-[10px] text-gray-400 mt-1">Give this animal a name so adopters connect with them — not just “Dog” or “Cat”.</p>
+          </div>
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Animal *</label>
             <select value={form.species} onChange={(e) => setForm({ ...form, species: e.target.value })} className="w-full border rounded-lg px-3 py-2.5 text-sm">

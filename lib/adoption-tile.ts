@@ -6,6 +6,7 @@
 
 export interface TileListing {
   id: string;
+  name?: string | null;
   species: string;
   species_other: string | null;
   breed: string | null;
@@ -131,13 +132,24 @@ export async function generateAdoptionTile(listing: TileListing): Promise<Blob |
 
   let y = photoY + photoH + 74;
 
-  // Title: species · breed
+  // Title: name (or species) · breed
   const speciesLabel = cap(listing.species === "other" ? (listing.species_other || "Animal") : listing.species);
-  const titleText = listing.breed?.trim() ? `${speciesLabel}  ·  ${listing.breed.trim()}` : speciesLabel;
+  const titleText = listing.name?.trim()
+    ? listing.name.trim()
+    : (listing.breed?.trim() ? `${speciesLabel}  ·  ${listing.breed.trim()}` : speciesLabel);
   ctx.fillStyle = "#1f2937";
   ctx.font = `800 58px ${headingFont}`;
   ctx.fillText(titleText, inner, y);
   y += 50;
+
+  // Subtitle: species · breed (only when a name is shown as the title)
+  if (listing.name?.trim()) {
+    const sub = listing.breed?.trim() ? `${speciesLabel}  ·  ${listing.breed.trim()}` : speciesLabel;
+    ctx.fillStyle = "#9ca3af";
+    ctx.font = `600 32px ${bodyFont}`;
+    ctx.fillText(sub, inner, y);
+    y += 44;
+  }
 
   // Details: age · gender · spay
   const det: string[] = [];

@@ -11,6 +11,7 @@ import { buildAdoptionCaption } from "@/lib/instagram";
 
 interface Listing {
   id: string;
+  name: string | null;
   species: string;
   species_other: string | null;
   breed: string | null;
@@ -80,10 +81,11 @@ export default function AnimalDetailPage() {
     );
   }
 
-  const displayName =
+  const speciesLabel =
     listing.species === "other"
       ? listing.species_other ?? "Animal"
       : `${listing.breed ? listing.breed + " " : ""}${listing.species}`;
+  const displayName = listing.name?.trim() || speciesLabel;
 
   const hasPhotos = listing.photos && listing.photos.length > 0;
 
@@ -137,6 +139,9 @@ export default function AnimalDetailPage() {
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
                 <h1 className="font-heading text-2xl sm:text-3xl font-bold capitalize">{displayName}</h1>
+                {listing.name?.trim() && (
+                  <p className="text-sm text-gray-500 capitalize">{speciesLabel}</p>
+                )}
                 {listing.location && (
                   <p className="text-sm text-gray-500 mt-1">📍 {listing.location}</p>
                 )}

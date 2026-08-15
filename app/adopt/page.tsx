@@ -11,6 +11,7 @@ import { buildAdoptionCaption } from "@/lib/instagram";
 
 interface Listing {
   id: string;
+  name: string | null;
   species: string;
   species_other: string | null;
   breed: string | null;
@@ -156,9 +157,12 @@ function AdoptPage() {
                 )}
               </div>
               <h3 className="font-heading font-bold text-lg capitalize">
-                {l.species === "other" ? l.species_other ?? "Animal" : l.species}
-                {l.breed && <span className="text-gray-500 font-normal text-sm"> · {l.breed}</span>}
+                {l.name?.trim() || (l.species === "other" ? l.species_other ?? "Animal" : l.species)}
               </h3>
+              <p className="text-xs text-gray-400 capitalize">
+                {l.species === "other" ? l.species_other ?? "Animal" : l.species}
+                {l.breed ? ` · ${l.breed}` : ""}
+              </p>
               <p className="text-sm text-gray-500">
                 {l.age ?? "Age unknown"} · {l.gender ?? "?"} {l.spayed_neutered ? " · ✂️ Spayed/Neutered" : ""}
               </p>

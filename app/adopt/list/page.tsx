@@ -19,7 +19,7 @@ export default function ListAdoptionPage() {
     { id: string; requester_name: string; requester_mobile: string; breed: string | null; species: string; species_other: string | null }[]
   >([]);
   const [form, setForm] = useState({
-    species: "dog", species_other: "", breed: "", age: "", gender: "unknown",
+    name: "", species: "dog", species_other: "", breed: "", age: "", gender: "unknown",
     spayed_neutered: false, location: "", description: "",
     foster_name: "", foster_mobile: "", foster_email: "",
   });
@@ -62,6 +62,7 @@ export default function ListAdoptionPage() {
 
     setSaving(true);
     const { error: insertErr } = await supabase.from("adoption_listings").insert({
+      name: form.name.trim() || null,
       species: form.species,
       species_other: form.species === "other" ? form.species_other : null,
       breed: form.breed || null,
@@ -147,6 +148,11 @@ export default function ListAdoptionPage() {
             {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 mb-4">{error}</div>}
 
             <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Pet Name</label>
+            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="e.g. Bruno, Whiskers" />
+            <p className="text-[10px] text-gray-400 mt-1">Give this animal a name so adopters connect with them — not just “Dog” or “Cat”.</p>
+          </div>
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Animal *</label>
             <select value={form.species} onChange={(e) => setForm({ ...form, species: e.target.value })} className="w-full border rounded-lg px-3 py-2.5 text-sm">

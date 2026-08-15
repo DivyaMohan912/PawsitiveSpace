@@ -81,6 +81,7 @@ export async function publishToInstagram(
  * Build a formatted Instagram caption for an adoption listing.
  */
 export function buildAdoptionCaption(listing: {
+  name?: string | null;
   species: string;
   species_other?: string | null;
   breed?: string | null;
@@ -94,11 +95,14 @@ export function buildAdoptionCaption(listing: {
   const animal = listing.species === "other"
     ? listing.species_other || "Animal"
     : listing.species;
+  const petName = listing.name?.trim();
 
   const lines = [
     `🐾 *Adopt Me!* 🐾`,
     ``,
-    `Meet this lovely ${animal}${listing.breed ? ` (${listing.breed})` : ""}!`,
+    petName
+      ? `Meet ${petName}, a lovely ${animal}${listing.breed ? ` (${listing.breed})` : ""}!`
+      : `Meet this lovely ${animal}${listing.breed ? ` (${listing.breed})` : ""}!`,
     ``,
   ];
 
@@ -109,7 +113,7 @@ export function buildAdoptionCaption(listing: {
   if (listing.description) lines.push(`\n${listing.description}`);
 
   lines.push(``);
-  lines.push(`🏠 Give this ${animal} a forever home!`);
+  lines.push(`🏠 Give ${petName ? petName : `this ${animal}`} a forever home!`);
   lines.push(`👉 Apply to adopt at www.pawsitivespace.in/adopt`);
   lines.push(``);
   lines.push(`#PawsitiveSpace #AdoptDontShop #AnimalRescue #Hyderabad #IndiaRescue #StrayAnimal #AdoptionIndia`);

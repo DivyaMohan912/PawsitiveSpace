@@ -79,6 +79,7 @@ function PawIcon({ className = "w-5 h-5" }: { className?: string }) {
 
 interface Listing {
   id: string;
+  name: string | null;
   species: string;
   species_other: string | null;
   breed: string | null;
@@ -199,9 +200,12 @@ export default function Home() {
                 )}
               </div>
               <h3 className="font-heading font-bold text-lg capitalize">
-                {l.species === "other" ? l.species_other ?? "Animal" : l.species}
-                {l.breed && <span className="text-gray-500 font-normal text-sm"> · {l.breed}</span>}
+                {l.name?.trim() || (l.species === "other" ? l.species_other ?? "Animal" : l.species)}
               </h3>
+              <p className="text-xs text-gray-400 capitalize">
+                {l.species === "other" ? l.species_other ?? "Animal" : l.species}
+                {l.breed ? ` · ${l.breed}` : ""}
+              </p>
               <p className="text-sm text-gray-500">
                 {l.age ?? "Age unknown"} · {l.gender ?? "?"} {l.spayed_neutered ? " · ✂️ Spayed/Neutered" : ""}
               </p>
@@ -221,6 +225,17 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {listings.length > 0 && (
+          <div className="text-center mt-8">
+            <Link
+              href="/adopt"
+              className="inline-flex items-center gap-2 bg-brand-orange text-white font-bold px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:brightness-110 transition"
+            >
+              More hearts waiting for homes <span aria-hidden>→</span>
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* ---- Volunteer Registration ---- */}
