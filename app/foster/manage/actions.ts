@@ -154,6 +154,13 @@ export async function rejectRequest(requestId: string) {
   return { success: true };
 }
 
+export async function markListingAdopted(listingId: string) {
+  const supabase = createAdminClient();
+  await supabase.from("adoption_listings").update({ status: "adopted" }).eq("id", listingId);
+  await supabase.from("adoption_requests").update({ status: "rejected" }).eq("listing_id", listingId).eq("status", "pending");
+  return { success: true };
+}
+
 export async function closeListing(listingId: string) {
   const supabase = createAdminClient();
   await supabase.from("adoption_listings").update({ status: "closed" }).eq("id", listingId);

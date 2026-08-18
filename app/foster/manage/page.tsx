@@ -6,7 +6,7 @@ import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 import AnimalAvatar from "@/components/admin/AnimalAvatar";
 import MaskedPhone from "@/components/admin/MaskedPhone";
-import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction, reopenListing as reopenListingAction, markWishFulfilled as markWishFulfilledAction, verifyFosterGoogle } from "./actions";
+import { loadFosterData, completeAdoption as completeAdoptionAction, rejectRequest as rejectRequestAction, closeListing as closeListingAction, markListingAdopted as markListingAdoptedAction, reopenListing as reopenListingAction, markWishFulfilled as markWishFulfilledAction, verifyFosterGoogle } from "./actions";
 import { createBrowserClient } from "@/lib/supabase";
 import ShareToInstagram from "@/components/ShareToInstagram";
 import { buildAdoptionCaption } from "@/lib/instagram";
@@ -139,6 +139,13 @@ export default function FosterManagePage() {
   async function closeListing(listingId: string) {
     setSaving(true);
     await closeListingAction(listingId);
+    setSaving(false);
+    load();
+  }
+
+  async function markAdopted(listingId: string) {
+    setSaving(true);
+    await markListingAdoptedAction(listingId);
     setSaving(false);
     load();
   }
@@ -332,6 +339,9 @@ export default function FosterManagePage() {
                         />
                         <button onClick={() => router.push(`/adopt/edit/${l.id}`)} className="text-xs text-brand-orange font-semibold hover:underline">
                           Edit
+                        </button>
+                        <button onClick={() => markAdopted(l.id)} disabled={saving} className="text-xs text-blue-600 font-semibold hover:underline">
+                          ✓ Adopted
                         </button>
                         <button onClick={() => closeListing(l.id)} disabled={saving} className="text-xs text-red-500 font-semibold hover:underline">
                           Close
