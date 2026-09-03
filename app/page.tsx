@@ -73,6 +73,14 @@ function PawIcon({ className = "w-5 h-5" }: { className?: string }) {
   );
 }
 
+function InstagramIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+      <path d="M12 2.2c3.2 0 3.6 0 4.85.07 1.17.05 1.8.25 2.23.42.56.22.96.48 1.38.9.42.42.68.82.9 1.38.17.42.37 1.06.42 2.23.06 1.27.07 1.65.07 4.85s0 3.58-.07 4.85c-.05 1.17-.25 1.8-.42 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.17-1.06.37-2.23.42-1.27.06-1.65.07-4.85.07s-3.58 0-4.85-.07c-1.17-.05-1.8-.25-2.23-.42a3.7 3.7 0 01-1.38-.9 3.7 3.7 0 01-.9-1.38c-.17-.42-.37-1.06-.42-2.23C2.21 15.58 2.2 15.2 2.2 12s0-3.58.07-4.85c.05-1.17.25-1.8.42-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.17 1.06-.37 2.23-.42C8.42 2.21 8.8 2.2 12 2.2zm0 1.8c-3.15 0-3.52.01-4.76.07-.98.04-1.5.21-1.86.35-.47.18-.8.4-1.15.75-.35.35-.57.68-.75 1.15-.14.36-.3.88-.35 1.86C3.11 8.48 3.1 8.85 3.1 12s.01 3.52.07 4.76c.04.98.21 1.5.35 1.86.18.47.4.8.75 1.15.35.35.68.57 1.15.75.36.14.88.3 1.86.35 1.24.06 1.61.07 4.76.07s3.52-.01 4.76-.07c.98-.04 1.5-.21 1.86-.35.47-.18.8-.4 1.15-.75.35-.35.57-.68.75-1.15.14-.36.3-.88.35-1.86.06-1.24.07-1.61.07-4.76s-.01-3.52-.07-4.76c-.04-.98-.21-1.5-.35-1.86a3.1 3.1 0 00-.75-1.15 3.1 3.1 0 00-1.15-.75c-.36-.14-.88-.3-1.86-.35C15.52 4.01 15.15 4 12 4zm0 3.06A4.94 4.94 0 1012 17a4.94 4.94 0 000-9.88zm0 8.14A3.2 3.2 0 1112 8.6a3.2 3.2 0 010 6.4zm6.28-8.34a1.15 1.15 0 11-2.3 0 1.15 1.15 0 012.3 0z" />
+    </svg>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Data                                                              */
 /* ------------------------------------------------------------------ */
@@ -157,9 +165,20 @@ export default function Home() {
         </div>
 
         {/* Floating illustrations */}
-        <div className="absolute right-4 sm:right-12 top-8 sm:top-6 flex items-end gap-0">
-          <CatIllustration className="w-24 sm:w-32 animate-float-slow opacity-90" earTipped />
-          <DogIllustration className="w-32 sm:w-44 animate-float -ml-4" />
+        <div className="absolute right-4 sm:right-12 top-8 sm:top-6 flex flex-col items-center">
+          <div className="flex items-end gap-0">
+            <CatIllustration className="w-24 sm:w-32 animate-float-slow opacity-90" earTipped />
+            <DogIllustration className="w-32 sm:w-44 animate-float -ml-4" />
+          </div>
+          <a
+            href="https://www.instagram.com/pawsitivespace.in?utm_source=qr&igsi=M2psdmhnaXBqdnJx"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex items-center gap-2 bg-white/90 hover:bg-white text-brand-orange font-bold text-sm px-4 py-2 rounded-full shadow-lg transition-colors"
+          >
+            <InstagramIcon className="w-5 h-5" />
+            Follow us on Instagram
+          </a>
         </div>
       </section>
 
