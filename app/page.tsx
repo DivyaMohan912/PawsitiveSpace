@@ -108,7 +108,7 @@ interface Listing {
 export default function Home() {
   const supabase = createBrowserClient();
   const [listings, setListings] = useState<Listing[]>([]);
-  const [stats, setStats] = useState({ rescued: 0, adopted: 0, fosters: 0 });
+  const [stats, setStats] = useState({ rescued: 0, adopted: 0, volunteers: 0 });
 
   useEffect(() => {
     loadHomeStats().then(setStats);
@@ -174,10 +174,11 @@ export default function Home() {
             href="https://www.instagram.com/pawsitivespace.in?utm_source=qr&igsi=M2psdmhnaXBqdnJx"
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-2 bg-white/90 hover:bg-white text-brand-orange font-bold text-sm px-4 py-2 rounded-full shadow-lg transition-colors"
+            aria-label="Follow us on Instagram"
+            title="Follow us on Instagram"
+            className="mt-3 inline-flex items-center justify-center w-11 h-11 bg-white/90 hover:bg-white text-brand-orange rounded-xl shadow-lg transition-colors"
           >
-            <InstagramIcon className="w-5 h-5" />
-            Follow us on Instagram
+            <InstagramIcon className="w-6 h-6" />
           </a>
         </div>
       </section>
@@ -188,7 +189,7 @@ export default function Home() {
           {[
             { value: stats.rescued, label: "RESCUED", color: "text-brand-orange" },
             { value: stats.adopted, label: "ADOPTED", color: "text-green-600" },
-            { value: stats.fosters, label: "FOSTERS", color: "text-red-500" },
+            { value: stats.volunteers, label: "VOLUNTEERS", color: "text-red-500" },
           ].map((s) => (
             <div key={s.label} className="text-center py-6 px-4">
               <p className={`text-3xl sm:text-4xl font-heading font-bold ${s.color}`}>{s.value}</p>

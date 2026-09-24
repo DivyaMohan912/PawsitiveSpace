@@ -55,6 +55,9 @@ export default function ShareToInstagram({
   const [errorMsg, setErrorMsg] = useState("");
   const [showTypeMenu, setShowTypeMenu] = useState(false);
 
+  // Instagram sharing is disabled — hide the control everywhere.
+  return null;
+
   // Don't render for viewers
   if (!role) return null;
 
